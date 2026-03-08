@@ -15,19 +15,34 @@ Given that runtime behavior is currently blocked in this environment, the observ
 ## Observable contract (frozen)
 
 - Output path directory: `OUTPUT_FOLDER` (default: `outputs`)
-- Output filename pattern: `<input_stem>_summary.txt`
-- Output path construction: `Path(output_folder) / f"{Path(input_path).stem}_summary.txt"`
-- Per-chunk structure:
+- Output artifacts:
+  - Final compendium (principal): `<input_stem>_summary.txt`
+  - Chunk summaries (histórico): `<input_stem>_summary_chunks.txt`
+  - Block summaries (intermedio): `<input_stem>_summary_blocks.txt`
+- Output path construction:
+  - `Path(output_folder) / f"{Path(input_path).stem}_summary.txt"`
+  - `Path(output_folder) / f"{Path(input_path).stem}_summary_chunks.txt"`
+  - `Path(output_folder) / f"{Path(input_path).stem}_summary_blocks.txt"`
+- Per-chunk artifact structure:
   - each chunk block starts with `## Chunk <n>`
   - chunk numbering starts at `1` and increments by `1`
   - chunk header is followed by a newline and the chunk summary text
-- Separator between chunk blocks: `\n\n---\n\n`
-- No trailing separator after the last chunk
+- separator between chunk blocks: `\n\n---\n\n`
+- no trailing separator after the last chunk
+- Per-block artifact structure:
+  - each block starts with `## Block <n> (Chunks <start>-<end>)`
+  - block numbering starts at `1` and increments by `1`
+- Dry run:
+  - no LLM calls
+  - no output artifacts written
+  - no checkpoints written
 
 ## Expected error semantics
 
 - Empty chunk list in pipeline raises:
   - `ValueError("No readable content found in: <source_path>")`
+- Empty chunk summary before level-2 synthesis raises:
+  - `RuntimeError("Chunk summary is empty for chunk <n>.")`
 - Missing API key in `ask_llm(prompt)` raises:
   - `RuntimeError("Missing OPENAI_API_KEY environment variable.")`
 - Empty LLM response raises:

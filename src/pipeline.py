@@ -7,10 +7,23 @@ import json
 from pathlib import Path
 
 from .chunker import split_into_chunks
-from .compiler import build_output_path, compile_chunk_summaries
+from .compiler import (
+    build_block_output_path,
+    build_chunk_output_path,
+    build_output_path,
+    compile_block_summaries,
+    compile_chunk_summaries,
+    compile_compendium,
+)
 from .config import CHUNK_OVERLAP, CHUNK_SIZE, OUTPUT_FOLDER
 from .loader import load_book
 from .summarizer import summarize_chunk
+from .synthesizer import (
+    expected_synthesis_calls,
+    make_chunk_summary_records,
+    synthesize_blocks,
+    synthesize_compendium,
+)
 from .utils import ensure_dir, save_text
 
 CHECKPOINT_DIR_NAME = ".checkpoints"
@@ -84,6 +97,8 @@ def process_book(
         raise ValueError(f"No readable content found in: {source_path}")
 
     output_path = build_output_path(str(source_path), OUTPUT_FOLDER)
+    chunk_output_path = build_chunk_output_path(str(source_path), OUTPUT_FOLDER)
+    block_output_path = build_block_output_path(str(source_path), OUTPUT_FOLDER)
     total_chunks_detected = len(chunks)
     chunking_hash = _sha256_text(f"{CHUNK_SIZE}:{CHUNK_OVERLAP}")
     book_hash = _sha256_text(text)
@@ -104,8 +119,10 @@ def process_book(
         planned_new_indices = pending_indices
 
     selected_indices = sorted(set(cached_summaries) | set(planned_new_indices))
-    llm_calls_expected = len(planned_new_indices)
+    chunk_llm_calls_expected = len(planned_new_indices)
     chunks_to_process = len(selected_indices)
+    synthesis_llm_calls_expected = expected_synthesis_calls(chunks_to_process)
+    llm_calls_expected = chunk_llm_calls_expected + synthesis_llm_calls_expected
 
     _log(verbose, "== Preflight ==")
     _log(verbose, f"Mode: {mode}")
@@ -113,6 +130,8 @@ def process_book(
     _log(verbose, f"Resume enabled: {resume}")
     _log(verbose, f"Total chunks detected: {total_chunks_detected}")
     _log(verbose, f"Chunks to process: {chunks_to_process}")
+    _log(verbose, f"LLM calls expected (chunk layer): {chunk_llm_calls_expected}")
+    _log(verbose, f"LLM calls expected (synthesis layer): {synthesis_llm_calls_expected}")
     _log(verbose, f"LLM calls expected: {llm_calls_expected}")
     _log(verbose, f"Estimated relative cost: {_relative_cost_scale(llm_calls_expected)}")
 
@@ -122,12 +141,14 @@ def process_book(
         _log(verbose, f"Total chunks detected: {total_chunks_detected}")
         _log(verbose, f"Chunks to process: {chunks_to_process}")
         _log(verbose, "Chunks really processed: 0")
+        _log(verbose, f"LLM calls expected (chunk layer): {chunk_llm_calls_expected}")
+        _log(verbose, f"LLM calls expected (synthesis layer): {synthesis_llm_calls_expected}")
         _log(verbose, f"LLM calls expected: {llm_calls_expected}")
         _log(verbose, "LLM calls made: 0")
         _log(verbose, f"Output path (not written): {output_path}")
         return output_path
 
-    llm_calls_made = 0
+    chunk_llm_calls_made = 0
     summaries_by_index = dict(cached_summaries)
     for run_position, chunk_index in enumerate(planned_new_indices, start=1):
         _log(
@@ -136,7 +157,7 @@ def process_book(
         )
         chunk_summary = summarize_chunk(chunks[chunk_index - 1])
         summaries_by_index[chunk_index] = chunk_summary
-        llm_calls_made += 1
+        chunk_llm_calls_made += 1
 
         if resume:
             ensure_dir(str(checkpoint_root))
@@ -158,17 +179,33 @@ def process_book(
 
     ordered_summaries = [summaries_by_index[index] for index in selected_indices]
     chunks_really_processed = len(ordered_summaries)
-    final_summary = compile_chunk_summaries(ordered_summaries)
+    chunk_summary_records = make_chunk_summary_records(ordered_summaries)
+    block_summary_records, block_llm_calls = synthesize_blocks(chunk_summary_records)
+    compendium_summary, compendium_llm_calls = synthesize_compendium(block_summary_records)
+    synthesis_llm_calls_made = block_llm_calls + compendium_llm_calls
+    llm_calls_made = chunk_llm_calls_made + synthesis_llm_calls_made
+
+    chunk_summary_artifact = compile_chunk_summaries(ordered_summaries)
+    block_summary_artifact = compile_block_summaries(block_summary_records)
+    final_summary = compile_compendium(compendium_summary)
 
     ensure_dir(OUTPUT_FOLDER)
+    save_text(chunk_output_path, chunk_summary_artifact)
+    save_text(block_output_path, block_summary_artifact)
     save_text(output_path, final_summary)
 
     _log(verbose, "== Final Summary ==")
     _log(verbose, f"Total chunks detected: {total_chunks_detected}")
     _log(verbose, f"Chunks to process: {chunks_to_process}")
     _log(verbose, f"Chunks really processed: {chunks_really_processed}")
+    _log(verbose, f"LLM calls expected (chunk layer): {chunk_llm_calls_expected}")
+    _log(verbose, f"LLM calls expected (synthesis layer): {synthesis_llm_calls_expected}")
+    _log(verbose, f"LLM calls made (chunk layer): {chunk_llm_calls_made}")
+    _log(verbose, f"LLM calls made (synthesis layer): {synthesis_llm_calls_made}")
     _log(verbose, f"LLM calls expected: {llm_calls_expected}")
     _log(verbose, f"LLM calls made: {llm_calls_made}")
+    _log(verbose, f"Chunk output path: {chunk_output_path}")
+    _log(verbose, f"Block output path: {block_output_path}")
     _log(verbose, f"Output path: {output_path}")
 
     return output_path

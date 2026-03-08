@@ -8,15 +8,17 @@ from .ai_client import ask_llm
 def build_summary_prompt(chunk_text: str) -> str:
     """Build a structured technical-summary prompt for one chunk."""
     return (
-        "You are a technical reading assistant. Analyze the text chunk and produce "
-        "a concise structured summary.\n\n"
-        "Return bullet points under these sections:\n"
-        "- Main concepts\n"
-        "- Definitions\n"
-        "- Principles\n"
-        "- Important rules\n\n"
-        "Keep it factual, clear, and based only on the provided text.\n\n"
-        "Text chunk:\n"
+        "Eres un asistente de lectura tecnica. Analiza el fragmento de texto y produce "
+        "un resumen estructurado y conciso en espanol.\n\n"
+        "Devuelve puntos bajo estas secciones:\n"
+        "- Conceptos principales\n"
+        "- Definiciones\n"
+        "- Principios\n"
+        "- Reglas importantes\n\n"
+        "Manten el contenido factual, claro y basado solo en el texto proporcionado.\n\n"
+        "Si aparecen palabras en latin o terminos que por contexto deban quedar en su idioma "
+        "original, conservalos sin traducir.\n\n"
+        "Fragmento de texto:\n"
         f"{chunk_text}"
     )
 
