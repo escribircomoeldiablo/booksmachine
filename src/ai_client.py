@@ -4,7 +4,13 @@ from __future__ import annotations
 
 import time
 
-from .config import MODEL_NAME, OPENAI_API_KEY
+from .config import (
+    MODEL_NAME,
+    OPENAI_API_KEY,
+    OPENAI_MAX_RETRIES,
+    OPENAI_RETRY_BACKOFF_SECONDS,
+    OPENAI_TIMEOUT_SECONDS,
+)
 
 try:
     from openai import OpenAI
@@ -23,13 +29,15 @@ def _validate_prereqs() -> None:
 
 
 def _build_client() -> OpenAI:  # type: ignore[valid-type]
-    return OpenAI(api_key=OPENAI_API_KEY, timeout=20.0)  # type: ignore[misc]
+    return OpenAI(api_key=OPENAI_API_KEY, timeout=OPENAI_TIMEOUT_SECONDS)  # type: ignore[misc]
 
 
 def _request_with_retry(client: OpenAI, prompt: str) -> str:  # type: ignore[valid-type]
     last_error: Exception | None = None
+    max_retries = max(1, OPENAI_MAX_RETRIES)
+    backoff_base = max(0.1, OPENAI_RETRY_BACKOFF_SECONDS)
 
-    for attempt in range(1, 4):
+    for attempt in range(1, max_retries + 1):
         try:
             response = client.responses.create(model=MODEL_NAME, input=prompt)
             text = (response.output_text or "").strip()
@@ -38,10 +46,10 @@ def _request_with_retry(client: OpenAI, prompt: str) -> str:  # type: ignore[val
             return text
         except Exception as exc:  # pragma: no cover
             last_error = exc
-            if attempt < 3:
-                time.sleep(0.8 * attempt)
+            if attempt < max_retries:
+                time.sleep(backoff_base * (2 ** (attempt - 1)))
 
-    raise RuntimeError(f"LLM request failed after 3 attempts: {last_error}")
+    raise RuntimeError(f"LLM request failed after {max_retries} attempts: {last_error}")
 
 
 def ask_llm(prompt: str) -> str:

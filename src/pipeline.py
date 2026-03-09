@@ -5,6 +5,7 @@ from __future__ import annotations
 import hashlib
 import json
 from pathlib import Path
+from typing import Callable
 
 from .chunker import split_into_chunks
 from .compiler import (
@@ -28,6 +29,7 @@ from .utils import ensure_dir, save_text
 
 CHECKPOINT_DIR_NAME = ".checkpoints"
 DEFAULT_SMOKE_MAX_CHUNKS = 3
+ProgressCallback = Callable[[str, str, dict[str, object]], None]
 
 
 def _relative_cost_scale(expected_calls: int) -> str:
@@ -41,6 +43,17 @@ def _relative_cost_scale(expected_calls: int) -> str:
 def _log(verbose: bool, message: str) -> None:
     if verbose:
         print(message)
+
+
+def _emit_progress(
+    progress_callback: ProgressCallback | None,
+    stage: str,
+    message: str,
+    **details: object,
+) -> None:
+    if progress_callback is None:
+        return
+    progress_callback(stage, message, details)
 
 
 def _sha256_text(text: str) -> str:
@@ -82,15 +95,21 @@ def process_book(
     dry_run: bool = False,
     verbose: bool = False,
     resume: bool = True,
+    output_language: str = "es",
+    progress_callback: ProgressCallback | None = None,
 ) -> str:
     """Process a book file and save an aggregated technical summary."""
     if mode not in {"full", "smoke"}:
         raise ValueError("mode must be either 'full' or 'smoke'")
     if max_chunks is not None and max_chunks <= 0:
         raise ValueError("max_chunks must be greater than 0 when provided")
+    if output_language not in {"es", "original"}:
+        raise ValueError("output_language must be either 'es' or 'original'")
 
     source_path = Path(path)
+    _emit_progress(progress_callback, "loading", f"Cargando documento: {source_path.name}")
     text = load_book(str(source_path))
+    _emit_progress(progress_callback, "chunking", "Dividiendo documento en chunks")
 
     chunks = split_into_chunks(text, chunk_size=CHUNK_SIZE, overlap=CHUNK_OVERLAP)
     if not chunks:
@@ -134,6 +153,18 @@ def process_book(
     _log(verbose, f"LLM calls expected (synthesis layer): {synthesis_llm_calls_expected}")
     _log(verbose, f"LLM calls expected: {llm_calls_expected}")
     _log(verbose, f"Estimated relative cost: {_relative_cost_scale(llm_calls_expected)}")
+    _emit_progress(
+        progress_callback,
+        "preflight",
+        (
+            f"Preflight listo: {chunks_to_process} chunks a procesar "
+            f"({chunk_llm_calls_expected} nuevos, idioma={output_language})"
+        ),
+        total_chunks_detected=total_chunks_detected,
+        chunks_to_process=chunks_to_process,
+        chunk_llm_calls_expected=chunk_llm_calls_expected,
+        synthesis_llm_calls_expected=synthesis_llm_calls_expected,
+    )
 
     if dry_run:
         _log(verbose, "Dry run active: skipping LLM calls, compilation, and file writes.")
@@ -146,6 +177,7 @@ def process_book(
         _log(verbose, f"LLM calls expected: {llm_calls_expected}")
         _log(verbose, "LLM calls made: 0")
         _log(verbose, f"Output path (not written): {output_path}")
+        _emit_progress(progress_callback, "dry_run", "Dry run completado, sin escribir archivos")
         return output_path
 
     chunk_llm_calls_made = 0
@@ -155,7 +187,21 @@ def process_book(
             verbose,
             f"[Chunk {run_position}/{len(planned_new_indices)}] Summarizing source chunk {chunk_index}",
         )
-        chunk_summary = summarize_chunk(chunks[chunk_index - 1])
+        _emit_progress(
+            progress_callback,
+            "summarizing",
+            f"Resumiendo chunk {run_position}/{len(planned_new_indices)} (origen #{chunk_index})",
+            run_position=run_position,
+            total_new_chunks=len(planned_new_indices),
+            chunk_index=chunk_index,
+        )
+        if output_language == "es":
+            chunk_summary = summarize_chunk(chunks[chunk_index - 1])
+        else:
+            chunk_summary = summarize_chunk(
+                chunks[chunk_index - 1],
+                output_language=output_language,
+            )
         summaries_by_index[chunk_index] = chunk_summary
         chunk_llm_calls_made += 1
 
@@ -180,8 +226,40 @@ def process_book(
     ordered_summaries = [summaries_by_index[index] for index in selected_indices]
     chunks_really_processed = len(ordered_summaries)
     chunk_summary_records = make_chunk_summary_records(ordered_summaries)
-    block_summary_records, block_llm_calls = synthesize_blocks(chunk_summary_records)
-    compendium_summary, compendium_llm_calls = synthesize_compendium(block_summary_records)
+    block_total = (len(chunk_summary_records) + 7) // 8
+    _emit_progress(progress_callback, "synthesis", "Sintetizando bloques")
+
+    def on_block_progress(block_index: int, total_blocks: int) -> None:
+        _log(verbose, f"[Block {block_index}/{total_blocks}] Summarizing block")
+        _emit_progress(
+            progress_callback,
+            "synthesis",
+            f"Resumiendo bloque {block_index}/{total_blocks}",
+            block_index=block_index,
+            total_blocks=total_blocks,
+        )
+
+    if output_language == "es":
+        block_summary_records, block_llm_calls = synthesize_blocks(
+            chunk_summary_records,
+            progress_callback=on_block_progress,
+        )
+    else:
+        block_summary_records, block_llm_calls = synthesize_blocks(
+            chunk_summary_records,
+            output_language=output_language,
+            progress_callback=on_block_progress,
+        )
+
+    _log(verbose, f"[Compendium] Building final compendium from {block_total} blocks")
+    _emit_progress(progress_callback, "synthesis", "Generando compendio final")
+    if output_language == "es":
+        compendium_summary, compendium_llm_calls = synthesize_compendium(block_summary_records)
+    else:
+        compendium_summary, compendium_llm_calls = synthesize_compendium(
+            block_summary_records,
+            output_language=output_language,
+        )
     synthesis_llm_calls_made = block_llm_calls + compendium_llm_calls
     llm_calls_made = chunk_llm_calls_made + synthesis_llm_calls_made
 
@@ -190,6 +268,7 @@ def process_book(
     final_summary = compile_compendium(compendium_summary)
 
     ensure_dir(OUTPUT_FOLDER)
+    _emit_progress(progress_callback, "writing", "Guardando artefactos de salida")
     save_text(chunk_output_path, chunk_summary_artifact)
     save_text(block_output_path, block_summary_artifact)
     save_text(output_path, final_summary)
@@ -207,5 +286,14 @@ def process_book(
     _log(verbose, f"Chunk output path: {chunk_output_path}")
     _log(verbose, f"Block output path: {block_output_path}")
     _log(verbose, f"Output path: {output_path}")
+    _emit_progress(
+        progress_callback,
+        "done",
+        "Proceso completado",
+        output_path=output_path,
+        chunk_output_path=chunk_output_path,
+        block_output_path=block_output_path,
+        llm_calls_made=llm_calls_made,
+    )
 
     return output_path

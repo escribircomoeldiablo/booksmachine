@@ -3,22 +3,39 @@
 from __future__ import annotations
 
 import math
-from typing import TypedDict
+from typing import Callable, TypedDict
 
 from .ai_client import ask_llm
 
 BLOCK_SIZE = 8
-BLOCK_OUTPUT_STYLE = (
-    "Devuelve una sintesis estructurada y concisa en espanol, con encabezados claros y "
-    "puntos. Evita repetir ideas equivalentes. Conserva sin traducir palabras en latin "
-    "y terminos que deban mantenerse en su idioma original por contexto."
-)
-COMPENDIUM_OUTPUT_STYLE = (
-    "Devuelve un compendio global coherente en espanol, con jerarquia clara y sin "
-    "redundancia. Usa solo informacion presente en los resumenes de bloques. Conserva "
-    "sin traducir palabras en latin y terminos que deban mantenerse en su idioma original "
-    "por contexto."
-)
+
+
+def _block_output_style(output_language: str) -> str:
+    if output_language == "original":
+        return (
+            "Devuelve una sintesis estructurada y concisa en el idioma original dominante de "
+            "los resumenes. Evita traducir terminos salvo necesidad de claridad."
+        )
+    return (
+        "Devuelve una sintesis estructurada y concisa en espanol, con encabezados claros y "
+        "puntos. Evita repetir ideas equivalentes. Conserva sin traducir palabras en latin "
+        "y terminos que deban mantenerse en su idioma original por contexto."
+    )
+
+
+def _compendium_output_style(output_language: str) -> str:
+    if output_language == "original":
+        return (
+            "Devuelve un compendio global coherente en el idioma original dominante de los "
+            "resumenes, con jerarquia clara y sin redundancia. Usa solo informacion presente "
+            "en los resumenes de bloques."
+        )
+    return (
+        "Devuelve un compendio global coherente en espanol, con jerarquia clara y sin "
+        "redundancia. Usa solo informacion presente en los resumenes de bloques. Conserva "
+        "sin traducir palabras en latin y terminos que deban mantenerse en su idioma original "
+        "por contexto."
+    )
 
 
 class ChunkSummaryRecord(TypedDict):
@@ -32,6 +49,9 @@ class BlockSummaryRecord(TypedDict):
     chunk_end: int
     chunk_indices: list[int]
     summary_text: str
+
+
+BlockProgressCallback = Callable[[int, int], None]
 
 
 def expected_synthesis_calls(chunk_count: int, *, block_size: int = BLOCK_SIZE) -> int:
@@ -66,12 +86,16 @@ def group_chunk_summary_records(
     ]
 
 
-def build_block_prompt(block_index: int, block_chunks: list[ChunkSummaryRecord]) -> str:
+def build_block_prompt(
+    block_index: int,
+    block_chunks: list[ChunkSummaryRecord],
+    output_language: str = "es",
+) -> str:
     """Build prompt for block synthesis from chunk summaries."""
     lines: list[str] = [
         "Eres un asistente de sintesis tecnica.",
         f"Sintetiza el Bloque {block_index} a partir de los siguientes resumenes de chunks.",
-        BLOCK_OUTPUT_STYLE,
+        _block_output_style(output_language),
         "",
         "Resumenes de chunks:",
     ]
@@ -89,14 +113,23 @@ def synthesize_blocks(
     chunk_records: list[ChunkSummaryRecord],
     *,
     block_size: int = BLOCK_SIZE,
+    output_language: str = "es",
+    progress_callback: BlockProgressCallback | None = None,
 ) -> tuple[list[BlockSummaryRecord], int]:
     """Synthesize chunk summaries into block summaries."""
     grouped_blocks = group_chunk_summary_records(chunk_records, block_size=block_size)
     block_records: list[BlockSummaryRecord] = []
     llm_calls_made = 0
 
+    total_blocks = len(grouped_blocks)
     for block_index, block_chunks in enumerate(grouped_blocks, start=1):
-        prompt = build_block_prompt(block_index, block_chunks)
+        if progress_callback is not None:
+            progress_callback(block_index, total_blocks)
+        prompt = build_block_prompt(
+            block_index,
+            block_chunks,
+            output_language=output_language,
+        )
         block_summary = ask_llm(prompt)
         llm_calls_made += 1
         chunk_indices = [record["chunk_index"] for record in block_chunks]
@@ -113,12 +146,15 @@ def synthesize_blocks(
     return block_records, llm_calls_made
 
 
-def build_compendium_prompt(block_records: list[BlockSummaryRecord]) -> str:
+def build_compendium_prompt(
+    block_records: list[BlockSummaryRecord],
+    output_language: str = "es",
+) -> str:
     """Build prompt for final global compendium from block summaries."""
     lines: list[str] = [
         "Eres un asistente de sintesis tecnica.",
         "Crea el compendio global final a partir de estos resumenes de bloques.",
-        COMPENDIUM_OUTPUT_STYLE,
+        _compendium_output_style(output_language),
         "",
         "Resumenes de bloques:",
     ]
@@ -135,11 +171,15 @@ def build_compendium_prompt(block_records: list[BlockSummaryRecord]) -> str:
     return "\n".join(lines)
 
 
-def synthesize_compendium(block_records: list[BlockSummaryRecord]) -> tuple[str, int]:
+def synthesize_compendium(
+    block_records: list[BlockSummaryRecord],
+    *,
+    output_language: str = "es",
+) -> tuple[str, int]:
     """Synthesize block summaries into the final compendium."""
     if not block_records:
         raise RuntimeError("Cannot synthesize compendium without block summaries.")
     if len(block_records) == 1:
         return str(block_records[0]["summary_text"]), 0
-    prompt = build_compendium_prompt(block_records)
+    prompt = build_compendium_prompt(block_records, output_language=output_language)
     return ask_llm(prompt), 1

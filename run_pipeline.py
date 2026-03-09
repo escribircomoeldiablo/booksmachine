@@ -13,6 +13,7 @@ def main() -> None:
     parser.add_argument("--dry-run", action="store_true")
     parser.add_argument("--no-resume", action="store_true")
     parser.add_argument("--quiet", action="store_true")
+    parser.add_argument("--output-language", choices=["es", "original"], default="es")
     args = parser.parse_args()
 
     process_book(
@@ -22,6 +23,7 @@ def main() -> None:
         dry_run=args.dry_run,
         verbose=not args.quiet,
         resume=not args.no_resume,
+        output_language=args.output_language,
     )
 
 
