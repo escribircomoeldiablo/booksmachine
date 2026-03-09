@@ -26,3 +26,4 @@ Switch profile by changing the file name.
 - Too few headings detected: lower `STRUCTURE_MIN_HEADING_SCORE`.
 - Too many chunks: increase `STRUCTURAL_CHUNKER_TARGET_SIZE`.
 - Last chunks too short: increase `STRUCTURAL_CHUNKER_MIN_SIZE`.
+- Exclude noisy section types from structural chunking with `STRUCTURAL_CHUNKER_EXCLUDED_TYPES` (CSV, default: `index,bibliography`).

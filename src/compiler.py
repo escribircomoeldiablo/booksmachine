@@ -46,3 +46,15 @@ def build_block_output_path(input_path: str, output_folder: str) -> str:
     """Build the block-summary artifact output path."""
     source_path = Path(input_path)
     return str(Path(output_folder) / f"{source_path.stem}_summary_blocks.txt")
+
+
+def build_knowledge_chunks_output_path(input_path: str, output_folder: str) -> str:
+    """Build the chunk-level knowledge JSONL artifact output path."""
+    source_path = Path(input_path)
+    return str(Path(output_folder) / f"{source_path.stem}_knowledge_chunks.jsonl")
+
+
+def build_knowledge_audit_output_path(input_path: str, output_folder: str) -> str:
+    """Build the chunk-level knowledge audit sidecar JSONL output path."""
+    source_path = Path(input_path)
+    return str(Path(output_folder) / f"{source_path.stem}_knowledge_audit.jsonl")

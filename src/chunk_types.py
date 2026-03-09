@@ -23,6 +23,11 @@ class ChunkStats(TypedDict):
     sections_consumed: int
     sections_split: int
     sections_merged: int
+    avg_sections_per_chunk: float
+    weak_sections_absorbed: int
+    weak_sections_total: int
+    weak_sections_absorbed_ratio: float
+    hard_max_chunk_size: int
 
 
 class ChunkSet(TypedDict):

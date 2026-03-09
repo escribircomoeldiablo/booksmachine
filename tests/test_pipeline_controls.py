@@ -159,65 +159,67 @@ class PipelineControlTests(unittest.TestCase):
             with patch("src.pipeline.OUTPUT_FOLDER", tmpdir):
                 with patch("src.pipeline.split_into_chunks", return_value=["c1", "c2"]):
                     with patch("src.pipeline.load_book", return_value="source text v1"):
-                        with patch(
-                            "src.pipeline.summarize_chunk",
-                            side_effect=lambda chunk: f"summary::{chunk}",
-                        ) as first_run_mock:
+                        with patch("src.pipeline.load_book_with_structure", return_value=("source text v1", None)):
                             with patch(
-                                "src.pipeline.synthesize_blocks",
-                                return_value=(
-                                    [
-                                        {
-                                            "block_index": 1,
-                                            "chunk_start": 1,
-                                            "chunk_end": 1,
-                                            "chunk_indices": [1],
-                                            "summary_text": "block::1",
-                                        }
-                                    ],
-                                    1,
-                                ),
-                            ):
+                                "src.pipeline.summarize_chunk",
+                                side_effect=lambda chunk: f"summary::{chunk}",
+                            ) as first_run_mock:
                                 with patch(
-                                    "src.pipeline.synthesize_compendium",
-                                    return_value=("compendium::first", 0),
+                                    "src.pipeline.synthesize_blocks",
+                                    return_value=(
+                                        [
+                                            {
+                                                "block_index": 1,
+                                                "chunk_start": 1,
+                                                "chunk_end": 1,
+                                                "chunk_indices": [1],
+                                                "summary_text": "block::1",
+                                            }
+                                        ],
+                                        1,
+                                    ),
                                 ):
-                                    process_book(
-                                        "books/sample_book.txt",
-                                        max_chunks=1,
-                                        verbose=False,
-                                    )
+                                    with patch(
+                                        "src.pipeline.synthesize_compendium",
+                                        return_value=("compendium::first", 0),
+                                    ):
+                                        process_book(
+                                            "books/sample_book.txt",
+                                            max_chunks=1,
+                                            verbose=False,
+                                        )
                         self.assertEqual(first_run_mock.call_count, 1)
 
                     with patch("src.pipeline.load_book", return_value="source text v2"):
-                        with patch(
-                            "src.pipeline.summarize_chunk",
-                            side_effect=lambda chunk: f"summary::{chunk}",
-                        ) as second_run_mock:
+                        with patch("src.pipeline.load_book_with_structure", return_value=("source text v2", None)):
                             with patch(
-                                "src.pipeline.synthesize_blocks",
-                                return_value=(
-                                    [
-                                        {
-                                            "block_index": 1,
-                                            "chunk_start": 1,
-                                            "chunk_end": 2,
-                                            "chunk_indices": [1, 2],
-                                            "summary_text": "block::1-2",
-                                        }
-                                    ],
-                                    1,
-                                ),
-                            ):
+                                "src.pipeline.summarize_chunk",
+                                side_effect=lambda chunk: f"summary::{chunk}",
+                            ) as second_run_mock:
                                 with patch(
-                                    "src.pipeline.synthesize_compendium",
-                                    return_value=("compendium::second", 0),
+                                    "src.pipeline.synthesize_blocks",
+                                    return_value=(
+                                        [
+                                            {
+                                                "block_index": 1,
+                                                "chunk_start": 1,
+                                                "chunk_end": 2,
+                                                "chunk_indices": [1, 2],
+                                                "summary_text": "block::1-2",
+                                            }
+                                        ],
+                                        1,
+                                    ),
                                 ):
-                                    process_book(
-                                        "books/sample_book.txt",
-                                        mode="full",
-                                        verbose=False,
-                                    )
+                                    with patch(
+                                        "src.pipeline.synthesize_compendium",
+                                        return_value=("compendium::second", 0),
+                                    ):
+                                        process_book(
+                                            "books/sample_book.txt",
+                                            mode="full",
+                                            verbose=False,
+                                        )
                         self.assertEqual(second_run_mock.call_count, 2)
 
     def test_preflight_and_final_counters_are_reported(self) -> None:

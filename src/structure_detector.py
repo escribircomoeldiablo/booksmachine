@@ -35,6 +35,68 @@ _HEADING_RULES: list[tuple[str, re.Pattern[str], float]] = [
 ]
 
 
+def _looks_like_index_entry(stripped: str) -> bool:
+    lowered = stripped.lower()
+    protected_keywords = (
+        "chapter",
+        "part",
+        "appendix",
+        "bibliography",
+        "references",
+        "index",
+        "section",
+    )
+    if any(re.search(rf"\b{re.escape(keyword)}\b", lowered) for keyword in protected_keywords):
+        return False
+
+    if len(stripped) <= 2 and stripped.isalpha() and stripped.upper() == stripped:
+        return True
+
+    if not re.search(r"\d", stripped):
+        return False
+
+    trailing_refs = re.search(
+        r"(?:\s|,)\d+(?:[-–]\d+)?(?:\s*,\s*\d+(?:[-–]\d+)?)*\.?$",
+        stripped,
+    )
+    if trailing_refs is None:
+        return False
+
+    if "," in stripped:
+        return True
+
+    if re.match(r"^[A-Z][A-Za-zÀ-ÖØ-öø-ÿ'’\-]+\s+\d+(?:[-–]\d+)?$", stripped):
+        return True
+
+    return len(stripped.split()) <= 6
+
+
+def _looks_like_toc_entry(stripped: str) -> bool:
+    lowered = stripped.lower()
+    has_toc_keyword = any(
+        re.search(rf"\b{keyword}\b", lowered)
+        for keyword in ("chapter", "part", "appendix", "contents")
+    )
+    if has_toc_keyword and len(re.findall(r"\d+", stripped)) >= 2:
+        return True
+
+    if re.search(r"\.{3,}\s*\d+\s*$", stripped):
+        return True
+
+    if re.search(r"\s+\d+\s*$", stripped):
+        lower = stripped.lower()
+        if (
+            any(token in lower for token in ("chapter", "appendix", "part", "contents"))
+            and len(re.findall(r"\d+", stripped)) >= 2
+        ):
+            return True
+
+    if re.match(r"^\d{3,}\s+[A-Z][A-Z\s\-/,:;()]{6,}$", stripped):
+        return True
+
+    return False
+
+
 def _line_to_page(start_char: int, page_units: list[PageUnit] | None) -> int | None:
     if not page_units:
         return None
@@ -62,6 +124,10 @@ def _score_for_line(line: str) -> tuple[float, str | None]:
     if not stripped:
         return 0.0, None
     if len(stripped) > 120:
+        return 0.0, None
+    if _looks_like_index_entry(stripped):
+        return 0.0, None
+    if _looks_like_toc_entry(stripped):
         return 0.0, None
 
     best_score = 0.0

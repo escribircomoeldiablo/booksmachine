@@ -6,7 +6,11 @@ import hashlib
 import json
 from pathlib import Path
 
-from .structure_classifier import classify_headings
+from .structure_classifier import (
+    HeadingClassification,
+    classify_headings,
+    is_reference_like_strong,
+)
 from .structure_detector import detect_headings_and_segments
 from .structure_types import (
     DocumentMap,
@@ -20,6 +24,8 @@ from .structure_types import (
 DOCUMENT_MAP_VERSION = "1.0"
 DOCUMENT_MAP_GENERATOR = "structure_pass_v1"
 PIPELINE_VERSION_DEFAULT = "booksmachine_0.9"
+_CONTEXT_PROMOTION_TYPES = {"chapter", "section", "appendix", "front_matter"}
+_TRIVIAL_PROMOTION_LABELS = {"unknown", "section"}
 
 
 def _sha256_text(text: str) -> str:
@@ -29,14 +35,89 @@ def _sha256_text(text: str) -> str:
 def _page_for_offset(offset: int, page_units: list[PageUnit] | None) -> int | None:
     if not page_units:
         return None
+    if offset < 0:
+        return page_units[0]["page"]
+    previous_page: int | None = None
     for unit in page_units:
         if unit["start_char"] <= offset < unit["end_char"]:
             return unit["page"]
-    return None
+        if offset >= unit["end_char"]:
+            previous_page = unit["page"]
+    if previous_page is not None:
+        return previous_page
+    return page_units[0]["page"]
 
 
 def _section_id(start_char: int) -> str:
     return f"section_{start_char}"
+
+
+def _is_context_promotion_candidate(heading: HeadingCandidate) -> bool:
+    if heading.get("pattern") != "title_case_short":
+        return False
+    text = heading.get("text")
+    if not isinstance(text, str):
+        return False
+    stripped = text.strip()
+    if not stripped:
+        return False
+    lowered = stripped.lower()
+    if lowered in _TRIVIAL_PROMOTION_LABELS:
+        return False
+    if len(stripped) == 1 and stripped.isalpha() and stripped.upper() == stripped:
+        return False
+    if is_reference_like_strong(stripped):
+        return False
+    return True
+
+
+def _is_neighbor_page_compatible(current: HeadingCandidate, neighbor: HeadingCandidate) -> bool:
+    current_page = current.get("page")
+    neighbor_page = neighbor.get("page")
+    if current_page is None or neighbor_page is None:
+        return True
+    return abs(current_page - neighbor_page) <= 2
+
+
+def _refine_contextual_classification(
+    headings: list[HeadingCandidate],
+    classified_by_index: dict[int, HeadingClassification],
+) -> dict[int, HeadingClassification]:
+    if not headings:
+        return classified_by_index
+
+    refined = dict(classified_by_index)
+    ordered = sorted(headings, key=lambda item: (item["start_char"], item["end_char"]))
+    for pos, heading in enumerate(ordered):
+        heading_index = heading["index"]
+        if heading_index in refined:
+            continue
+        if not _is_context_promotion_candidate(heading):
+            continue
+
+        neighbor_support = 0
+        for distance in (1, 2):
+            for neighbor_pos in (pos - distance, pos + distance):
+                if neighbor_pos < 0 or neighbor_pos >= len(ordered):
+                    continue
+                neighbor = ordered[neighbor_pos]
+                if not _is_neighbor_page_compatible(heading, neighbor):
+                    continue
+                neighbor_classification = refined.get(neighbor["index"])
+                if not isinstance(neighbor_classification, dict):
+                    continue
+                neighbor_type = neighbor_classification.get("type")
+                if isinstance(neighbor_type, str) and neighbor_type in _CONTEXT_PROMOTION_TYPES:
+                    neighbor_support += 1
+        if neighbor_support == 0:
+            continue
+        confidence = 0.52 if neighbor_support == 1 else 0.6
+        refined[heading_index] = HeadingClassification(
+            index=heading_index,
+            type="section",
+            confidence=confidence,
+        )
+    return refined
 
 
 def _section_from_segment(
@@ -244,6 +325,10 @@ def build_document_map(
         headings,
         max_headings_for_llm=max_headings_for_llm,
         use_llm=use_llm,
+    )
+    classified_by_index = _refine_contextual_classification(
+        headings,
+        classified_by_index,
     )
 
     base_sections: list[SectionRecord] = []
