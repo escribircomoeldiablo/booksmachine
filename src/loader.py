@@ -2,28 +2,46 @@
 
 from __future__ import annotations
 
+import os
 from pathlib import Path
-import re
+
+from .config import OUTPUT_FOLDER
+from .document_types import BookDocument
+from .pdf_cleaning import assemble_clean_text, clean_pdf_pages
+from .pdf_diagnostics import analyze_extraction, write_extraction_report
+from .pdf_extract import extract_pdf_pages
 
 
-def _normalize_pdf_text(raw_text: str) -> str:
-    """Normalize common PDF layout artifacts conservatively for downstream chunking."""
-    text = raw_text.replace("\r\n", "\n").replace("\r", "\n")
+class UnusablePdfTextError(RuntimeError):
+    """Raised internally when extracted PDF text is not usable."""
 
-    # Join words split by visual line breaks when both sides are alphabetic.
-    text = re.sub(r"([A-Za-z])\n([A-Za-z])", r"\1\2", text)
 
-    # Preserve paragraph boundaries while flattening intra-paragraph line breaks.
-    text = re.sub(r"\n{3,}", "\n\n", text)
-    paragraph_marker = "<<PDF_PARA>>"
-    text = text.replace("\n\n", paragraph_marker)
-    text = text.replace("\n", " ")
+def _diagnostics_enabled() -> bool:
+    value = os.getenv("PDF_EXTRACTION_DIAGNOSTICS", "0").strip().lower()
+    return value in {"1", "true", "yes", "on"}
 
-    # Collapse horizontal whitespace noise from extraction.
-    text = re.sub(r"[ \t\f\v]+", " ", text)
-    text = text.replace(paragraph_marker, "\n\n")
-    text = re.sub(r" *\n\n *", "\n\n", text)
-    return text.strip()
+
+def _build_document_from_pdf(path: str) -> BookDocument:
+    raw_pages = extract_pdf_pages(path)
+    clean_pages = clean_pdf_pages(raw_pages)
+    diagnostics = analyze_extraction(raw_pages, clean_pages)
+
+    if _diagnostics_enabled():
+        source_path = Path(path)
+        report_path = Path(OUTPUT_FOLDER) / f"{source_path.stem}_extraction_report.json"
+        write_extraction_report(diagnostics, report_path)
+
+    if not diagnostics.is_usable:
+        raise UnusablePdfTextError(diagnostics.unusable_reason or "unusable extracted content")
+
+    return BookDocument(
+        source_path=path,
+        source_type="pdf",
+        clean_text=assemble_clean_text(clean_pages),
+        pages_raw=raw_pages,
+        pages_clean=clean_pages,
+        diagnostics=diagnostics,
+    )
 
 
 def load_text_file(path: str) -> str:
@@ -36,26 +54,13 @@ def load_text_file(path: str) -> str:
 
 
 def load_pdf_file(path: str) -> str:
-    """Extract and return text content from a PDF file."""
-    file_path = Path(path)
-
+    """Extract, clean, and return text content from a PDF file."""
     try:
-        from pypdf import PdfReader
-    except ImportError as exc:  # pragma: no cover
-        raise RuntimeError(
-            "PDF support requires 'pypdf'. Install it with: pip install pypdf"
-        ) from exc
-
-    try:
-        reader = PdfReader(str(file_path))
-    except FileNotFoundError as exc:
-        raise FileNotFoundError(f"PDF file not found: {file_path}") from exc
-
-    pages: list[str] = []
-    for page in reader.pages:
-        pages.append(page.extract_text() or "")
-    raw_text = "\n".join(pages).strip()
-    return _normalize_pdf_text(raw_text)
+        document = _build_document_from_pdf(path)
+    except UnusablePdfTextError:
+        # Keep pipeline external failure path stable by yielding empty text.
+        return ""
+    return document.clean_text
 
 
 def load_book(path: str) -> str:
