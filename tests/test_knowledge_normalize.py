@@ -2,7 +2,11 @@ from __future__ import annotations
 
 import unittest
 
-from src.knowledge_normalize import apply_post_extraction_clamp, apply_semantic_local_filter
+from src.knowledge_normalize import (
+    apply_post_extraction_clamp,
+    apply_semantic_local_filter,
+    merge_chunk_knowledge_records,
+)
 from src.knowledge_schema import ChunkKnowledgeV1
 
 
@@ -131,6 +135,20 @@ class KnowledgeNormalizeClampTests(unittest.TestCase):
             ["Modern reinterpretation of the house while preserving traditional sect doctrine."],
         )
         self.assertIn("mark_modern_embedded_preserved_core", actions)
+
+    def test_merge_chunk_knowledge_records_builds_canonical_concept_index(self) -> None:
+        r1 = _record()
+        r1.concepts = ["Whole-sign houses", "Angular Houses"]
+        r2 = _record()
+        r2.concepts = ["Whole sign house system", "Succedent houses", "angular house"]
+
+        merged = merge_chunk_knowledge_records([r1, r2])
+        self.assertEqual(merged["schema_version"], "merge_v1")
+        concept_index = merged["concept_index"]
+        self.assertIn("whole sign house system", concept_index)
+        self.assertEqual(concept_index["whole sign house system"], [1, 2])
+        self.assertEqual(concept_index["angular house"], [1, 2])
+        self.assertEqual(concept_index["succedent house"], [2])
 
 
 if __name__ == "__main__":

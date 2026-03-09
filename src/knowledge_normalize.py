@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import re
 
+from .concept_normalization import normalize_concepts
 from .knowledge_schema import ChunkKnowledgeV1
 
 CORE_FIELDS: tuple[str, ...] = (
@@ -271,9 +272,26 @@ def apply_post_extraction_clamp(
 
 
 def merge_chunk_knowledge_records(records: list[ChunkKnowledgeV1]) -> dict[str, object]:
-    """Placeholder for future deterministic multi-chunk merge implementation."""
+    """Deterministic concept-level consolidation over chunk records."""
+    concept_index: dict[str, list[int]] = {}
+    for idx, record in enumerate(records, start=1):
+        canonical_concepts = normalize_concepts(record.concepts)
+        for concept_name in canonical_concepts:
+            bucket = concept_index.setdefault(concept_name, [])
+            bucket.append(idx)
+
+    merged_concepts = [
+        {
+            "concept": concept_name,
+            "chunk_indices": indices,
+            "mentions": len(indices),
+        }
+        for concept_name, indices in sorted(concept_index.items())
+    ]
     return {
-        "schema_version": "merge_stub_v1",
+        "schema_version": "merge_v1",
         "record_count": len(records),
-        "status": "not_implemented",
+        "concept_index": concept_index,
+        "merged_concepts": merged_concepts,
+        "status": "ok",
     }
