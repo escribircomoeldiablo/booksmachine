@@ -10,6 +10,7 @@ from .document_types import BookDocument
 from .pdf_cleaning import assemble_clean_text, clean_pdf_pages
 from .pdf_diagnostics import analyze_extraction, write_extraction_report
 from .pdf_extract import extract_pdf_pages
+from .structure_types import PageUnit
 
 
 class UnusablePdfTextError(RuntimeError):
@@ -65,11 +66,36 @@ def load_pdf_file(path: str) -> str:
 
 def load_book(path: str) -> str:
     """Load a book from a supported file extension."""
+    return load_book_with_structure(path)[0]
+
+
+def _build_page_units(document: BookDocument) -> list[PageUnit] | None:
+    if document.pages_clean is None:
+        return None
+    units: list[PageUnit] = []
+    cursor = 0
+    for page in document.pages_clean:
+        text = page.clean_text.strip()
+        if not text:
+            continue
+        start = cursor
+        end = start + len(text)
+        units.append(PageUnit(page=page.page_index, start_char=start, end_char=end))
+        cursor = end + 2
+    return units
+
+
+def load_book_with_structure(path: str) -> tuple[str, list[PageUnit] | None]:
+    """Load a book and return clean text plus optional page units."""
     extension = Path(path).suffix.lower()
 
     if extension == ".txt":
-        return load_text_file(path)
+        return load_text_file(path), None
     if extension == ".pdf":
-        return load_pdf_file(path)
+        try:
+            document = _build_document_from_pdf(path)
+        except UnusablePdfTextError:
+            return "", None
+        return document.clean_text, _build_page_units(document)
 
     raise ValueError(f"Unsupported file extension: {extension or '<none>'}")

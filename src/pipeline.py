@@ -8,6 +8,7 @@ from pathlib import Path
 from typing import Callable
 
 from .chunker import split_into_chunks
+from .chunker_structural import build_structural_chunks
 from .compiler import (
     build_block_output_path,
     build_chunk_output_path,
@@ -16,8 +17,28 @@ from .compiler import (
     compile_chunk_summaries,
     compile_compendium,
 )
-from .config import CHUNK_OVERLAP, CHUNK_SIZE, OUTPUT_FOLDER
-from .loader import load_book
+from .config import (
+    CHUNK_OVERLAP,
+    CHUNK_SIZE,
+    OUTPUT_FOLDER,
+    PIPELINE_VERSION,
+    STRUCTURE_MAX_HEADINGS_FOR_LLM,
+    STRUCTURE_MAX_SECTION_SIZE_CHARS,
+    STRUCTURE_MIN_HEADING_SCORE,
+    STRUCTURE_PASS_ENABLED,
+    STRUCTURE_PASS_USE_LLM,
+    STRUCTURAL_CHUNKER_ENABLED,
+    STRUCTURAL_CHUNKER_MIN_SIZE,
+    STRUCTURAL_CHUNKER_SPLIT_WINDOW,
+    STRUCTURAL_CHUNKER_TARGET_SIZE,
+)
+from .loader import load_book, load_book_with_structure
+from .structure_pass import (
+    build_document_map,
+    build_document_map_output_path,
+    build_document_map_sidecar_payload,
+    serialize_document_map_sidecar,
+)
 from .summarizer import summarize_chunk
 from .synthesizer import (
     expected_synthesis_calls,
@@ -87,6 +108,22 @@ def _save_manifest(checkpoint_root: Path, payload: dict[str, object]) -> None:
     )
 
 
+def _chunking_fingerprint(
+    *,
+    mode: str,
+    chunk_size: int,
+    overlap: int,
+    target_size: int,
+    min_size: int,
+    split_window: int,
+) -> str:
+    if mode == "structural":
+        token = f"structural:{target_size}:{min_size}:{split_window}"
+    else:
+        token = f"legacy:{chunk_size}:{overlap}"
+    return _sha256_text(token)
+
+
 def process_book(
     path: str,
     *,
@@ -108,10 +145,68 @@ def process_book(
 
     source_path = Path(path)
     _emit_progress(progress_callback, "loading", f"Cargando documento: {source_path.name}")
-    text = load_book(str(source_path))
+    structure_enabled = STRUCTURE_PASS_ENABLED
+    if structure_enabled:
+        text, page_units = load_book_with_structure(str(source_path))
+    else:
+        text = load_book(str(source_path))
+        page_units = None
+    book_hash = _sha256_text(text)
+    document_map_path = build_document_map_output_path(str(source_path), OUTPUT_FOLDER)
+    structure_map: dict[str, object] | None = None
+    if structure_enabled:
+        _emit_progress(progress_callback, "structure", "Construyendo DocumentMap")
+        structure_map = build_document_map(
+            text,
+            source_fingerprint=str(source_path),
+            page_units=page_units,
+            use_llm=STRUCTURE_PASS_USE_LLM,
+            min_heading_score=STRUCTURE_MIN_HEADING_SCORE,
+            max_headings_for_llm=STRUCTURE_MAX_HEADINGS_FOR_LLM,
+            max_section_size_chars=STRUCTURE_MAX_SECTION_SIZE_CHARS,
+        )
+        _log(
+            verbose,
+            (
+                "Structure pass: "
+                f"{structure_map['stats']['sections_generated']} sections, "
+                f"{structure_map['stats']['heading_candidates']} headings, "
+                f"text_hash={structure_map['text_hash']}"
+            ),
+        )
     _emit_progress(progress_callback, "chunking", "Dividiendo documento en chunks")
+    chunking_mode = "legacy"
+    chunking_target_size = CHUNK_SIZE
+    chunking_min_size = 0
+    chunking_split_window = 0
+    structural_chunk_stats: dict[str, object] | None = None
 
-    chunks = split_into_chunks(text, chunk_size=CHUNK_SIZE, overlap=CHUNK_OVERLAP)
+    chunks: list[str]
+    if (
+        STRUCTURAL_CHUNKER_ENABLED
+        and structure_enabled
+        and structure_map is not None
+        and structure_map.get("text_hash") == book_hash
+    ):
+        sections = structure_map.get("sections", [])
+        if isinstance(sections, list) and len(sections) > 1:
+            chunk_set = build_structural_chunks(
+                text,
+                structure_map,  # type: ignore[arg-type]
+                target_size=STRUCTURAL_CHUNKER_TARGET_SIZE,
+                min_size=STRUCTURAL_CHUNKER_MIN_SIZE,
+                split_window=STRUCTURAL_CHUNKER_SPLIT_WINDOW,
+            )
+            chunks = [record["text"] for record in chunk_set["chunks"]]
+            chunking_mode = "structural"
+            chunking_target_size = STRUCTURAL_CHUNKER_TARGET_SIZE
+            chunking_min_size = STRUCTURAL_CHUNKER_MIN_SIZE
+            chunking_split_window = STRUCTURAL_CHUNKER_SPLIT_WINDOW
+            structural_chunk_stats = dict(chunk_set["stats"])
+        else:
+            chunks = split_into_chunks(text, chunk_size=CHUNK_SIZE, overlap=CHUNK_OVERLAP)
+    else:
+        chunks = split_into_chunks(text, chunk_size=CHUNK_SIZE, overlap=CHUNK_OVERLAP)
     if not chunks:
         raise ValueError(f"No readable content found in: {source_path}")
 
@@ -119,8 +214,14 @@ def process_book(
     chunk_output_path = build_chunk_output_path(str(source_path), OUTPUT_FOLDER)
     block_output_path = build_block_output_path(str(source_path), OUTPUT_FOLDER)
     total_chunks_detected = len(chunks)
-    chunking_hash = _sha256_text(f"{CHUNK_SIZE}:{CHUNK_OVERLAP}")
-    book_hash = _sha256_text(text)
+    chunking_hash = _chunking_fingerprint(
+        mode=chunking_mode,
+        chunk_size=CHUNK_SIZE,
+        overlap=CHUNK_OVERLAP,
+        target_size=chunking_target_size,
+        min_size=chunking_min_size,
+        split_window=chunking_split_window,
+    )
     checkpoint_root = _checkpoint_root(OUTPUT_FOLDER, book_hash, chunking_hash)
 
     cached_summaries: dict[int, str] = {}
@@ -219,7 +320,26 @@ def process_book(
                 "chunking_fingerprint": chunking_hash,
                 "chunk_size": CHUNK_SIZE,
                 "chunk_overlap": CHUNK_OVERLAP,
+                "chunking": {
+                    "mode": chunking_mode,
+                    "target_size": chunking_target_size,
+                    "min_size": chunking_min_size,
+                    "split_window": chunking_split_window,
+                },
                 "total_chunks_detected": total_chunks_detected,
+                "structure_enabled": structure_enabled,
+                "structure_version": (
+                    structure_map["version"] if structure_enabled and structure_map is not None else None
+                ),
+                "structure_generator": (
+                    structure_map["generator"] if structure_enabled and structure_map is not None else None
+                ),
+                "document_map_text_hash": (
+                    structure_map["text_hash"] if structure_enabled and structure_map is not None else None
+                ),
+                "structural_chunk_stats": (
+                    structural_chunk_stats if chunking_mode == "structural" else None
+                ),
             },
         )
 
@@ -272,6 +392,12 @@ def process_book(
     save_text(chunk_output_path, chunk_summary_artifact)
     save_text(block_output_path, block_summary_artifact)
     save_text(output_path, final_summary)
+    if structure_enabled and structure_map is not None:
+        sidecar_payload = build_document_map_sidecar_payload(
+            structure_map,
+            pipeline_version=PIPELINE_VERSION,
+        )
+        save_text(document_map_path, serialize_document_map_sidecar(sidecar_payload))
 
     _log(verbose, "== Final Summary ==")
     _log(verbose, f"Total chunks detected: {total_chunks_detected}")
@@ -286,6 +412,8 @@ def process_book(
     _log(verbose, f"Chunk output path: {chunk_output_path}")
     _log(verbose, f"Block output path: {block_output_path}")
     _log(verbose, f"Output path: {output_path}")
+    if structure_enabled and structure_map is not None:
+        _log(verbose, f"Document map output path: {document_map_path}")
     _emit_progress(
         progress_callback,
         "done",
@@ -293,6 +421,7 @@ def process_book(
         output_path=output_path,
         chunk_output_path=chunk_output_path,
         block_output_path=block_output_path,
+        document_map_path=(document_map_path if structure_enabled and structure_map is not None else None),
         llm_calls_made=llm_calls_made,
     )
 
