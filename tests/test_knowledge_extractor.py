@@ -3,11 +3,36 @@ from __future__ import annotations
 import unittest
 from unittest.mock import patch
 
-from src.knowledge_extractor import chunk_knowledge_to_summary_text, extract_chunk_knowledge
+from src.knowledge_extractor import (
+    build_chunk_knowledge_prompt,
+    chunk_knowledge_to_summary_text,
+    extract_chunk_knowledge,
+)
 from src.knowledge_schema import SectionRef
 
 
 class KnowledgeExtractorTests(unittest.TestCase):
+    def test_prompt_defaults_to_original_language_for_knowledge(self) -> None:
+        prompt = build_chunk_knowledge_prompt(
+            chunk_text="English source text",
+            chunk_id="chunk_1",
+            source_fingerprint="book_hash",
+            section_refs=[],
+        )
+
+        self.assertIn("idioma original del fragmento", prompt)
+
+    def test_prompt_can_target_spanish_knowledge_output(self) -> None:
+        prompt = build_chunk_knowledge_prompt(
+            chunk_text="English source text",
+            chunk_id="chunk_1",
+            source_fingerprint="book_hash",
+            section_refs=[],
+            knowledge_language="es",
+        )
+
+        self.assertIn("campos textuales en espanol tecnico claro", prompt)
+
     def test_valid_llm_payload_produces_valid_record(self) -> None:
         payload = (
             '{"schema_version":"1.0.0","chunk_id":"chunk_1","source_fingerprint":"book_hash",'

@@ -4,7 +4,8 @@ from __future__ import annotations
 
 from dataclasses import asdict, dataclass, field
 
-CHUNK_KNOWLEDGE_SCHEMA_VERSION = "1.0.0"
+CHUNK_KNOWLEDGE_SCHEMA_VERSION = "2.0.0"
+LEGACY_CHUNK_KNOWLEDGE_SCHEMA_VERSION = "1.0.0"
 
 
 @dataclass(slots=True)
@@ -13,6 +14,40 @@ class SectionRef:
     type: str
     start_char: int
     end_char: int
+
+
+@dataclass(slots=True)
+class ProcedureStep:
+    id: str
+    order: int
+    text: str
+
+
+@dataclass(slots=True)
+class DecisionRule:
+    condition: str
+    outcome: str
+    related_steps: list[str] = field(default_factory=list)
+
+
+@dataclass(slots=True)
+class ProcedureCondition:
+    text: str
+    scope: str = ""
+    related_steps: list[str] = field(default_factory=list)
+
+
+@dataclass(slots=True)
+class AuthorVariant:
+    author: str
+    kind: str
+    text: str
+    related_steps: list[str] = field(default_factory=list)
+
+
+@dataclass(slots=True)
+class ProcedureOutput:
+    text: str
 
 
 @dataclass(slots=True)
@@ -29,6 +64,12 @@ class ChunkKnowledgeV1:
     relationships: list[str] = field(default_factory=list)
     examples: list[str] = field(default_factory=list)
     ambiguities: list[str] = field(default_factory=list)
+    procedure_steps: list[ProcedureStep] = field(default_factory=list)
+    decision_rules: list[DecisionRule] = field(default_factory=list)
+    preconditions: list[ProcedureCondition] = field(default_factory=list)
+    exceptions: list[ProcedureCondition] = field(default_factory=list)
+    author_variants: list[AuthorVariant] = field(default_factory=list)
+    procedure_outputs: list[ProcedureOutput] = field(default_factory=list)
 
     def to_dict(self) -> dict[str, object]:
         """Serialize to a plain dict for JSONL persistence."""
@@ -57,4 +98,10 @@ def make_empty_chunk_knowledge(
         relationships=[],
         examples=[],
         ambiguities=[],
+        procedure_steps=[],
+        decision_rules=[],
+        preconditions=[],
+        exceptions=[],
+        author_variants=[],
+        procedure_outputs=[],
     )

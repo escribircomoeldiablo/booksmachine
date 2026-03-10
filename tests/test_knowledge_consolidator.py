@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+import io
 import json
+import sys
 import tempfile
 import unittest
 from pathlib import Path
@@ -8,20 +10,25 @@ from unittest.mock import patch
 
 from src.knowledge_consolidator import (
     _build_canonical_concepts,
+    _build_family_candidates_payload,
     _build_family_payload,
     _build_taxonomy_comparison_payload,
     _build_taxonomy_audit_payload,
     _build_taxonomy_output_path,
     _export_taxonomy_audit,
+    build_family_candidates_output_path,
     build_concept_index,
     build_concepts_output_path,
     build_families_output_path,
+    build_knowledge_family_candidates,
     build_knowledge_families,
     build_knowledge_ontology,
     consolidate_knowledge_chunks,
     export_concepts,
+    export_family_candidates,
     export_families,
     load_chunk_knowledge,
+    main,
     merge_concept_knowledge,
     normalize_concepts,
 )
@@ -35,6 +42,53 @@ def _write_jsonl(path: Path, rows: list[dict[str, object]]) -> None:
 
 
 class KnowledgeConsolidatorTests(unittest.TestCase):
+    def test_main_builds_selected_artifact_and_prints_output_path(self) -> None:
+        stdout = io.StringIO()
+        with (
+            patch.object(sys, "argv", ["knowledge_consolidator", "outputs/book_knowledge_chunks.jsonl", "--artifact", "families"]),
+            patch("src.knowledge_consolidator.build_knowledge_families", return_value="outputs/book_knowledge_families.json") as families_mock,
+            patch("sys.stdout", stdout),
+        ):
+            main()
+
+        families_mock.assert_called_once_with("outputs/book_knowledge_chunks.jsonl", None)
+        self.assertEqual(stdout.getvalue().strip(), "outputs/book_knowledge_families.json")
+
+    def test_main_builds_all_artifacts_in_order(self) -> None:
+        stdout = io.StringIO()
+        with (
+            patch.object(sys, "argv", ["knowledge_consolidator", "outputs/book_knowledge_chunks.jsonl", "--artifact", "all"]),
+            patch("src.knowledge_consolidator.consolidate_knowledge_chunks", return_value="outputs/book_knowledge_concepts.json") as concepts_mock,
+            patch("src.knowledge_consolidator.build_knowledge_families", return_value="outputs/book_knowledge_families.json") as families_mock,
+            patch(
+                "src.knowledge_consolidator.build_knowledge_family_candidates",
+                return_value="outputs/book_knowledge_family_candidates.json",
+            ) as candidates_mock,
+            patch("src.knowledge_consolidator.build_knowledge_ontology", return_value="outputs/book_knowledge_ontology.json") as ontology_mock,
+            patch("src.knowledge_consolidator.build_procedural_audit", return_value="outputs/book_procedural_audit.json") as procedural_mock,
+            patch("src.knowledge_consolidator.build_procedure_frames_artifact", return_value="outputs/book_procedure_frames.json") as frames_mock,
+            patch("sys.stdout", stdout),
+        ):
+            main()
+
+        concepts_mock.assert_called_once_with("outputs/book_knowledge_chunks.jsonl")
+        families_mock.assert_called_once_with("outputs/book_knowledge_chunks.jsonl")
+        candidates_mock.assert_called_once_with("outputs/book_knowledge_chunks.jsonl")
+        ontology_mock.assert_called_once_with("outputs/book_knowledge_chunks.jsonl")
+        procedural_mock.assert_called_once_with("outputs/book_knowledge_chunks.jsonl")
+        frames_mock.assert_called_once_with("outputs/book_knowledge_chunks.jsonl")
+        self.assertEqual(
+            stdout.getvalue().strip().splitlines(),
+            [
+                "outputs/book_knowledge_concepts.json",
+                "outputs/book_knowledge_families.json",
+                "outputs/book_knowledge_family_candidates.json",
+                "outputs/book_knowledge_ontology.json",
+                "outputs/book_procedural_audit.json",
+                "outputs/book_procedure_frames.json",
+            ],
+        )
+
     def test_load_chunk_knowledge_uses_audit_sidecar_and_skips_skipped_chunks(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:
             chunks_path = Path(tmpdir) / "Book_knowledge_chunks.jsonl"
@@ -146,6 +200,209 @@ class KnowledgeConsolidatorTests(unittest.TestCase):
             merged["angular house"]["relationships"],
             ["Angular houses oppose cadent houses.", "Angular triads flank angular houses."],
         )
+
+    def test_merge_concept_knowledge_derives_shared_procedure_from_multiple_rules(self) -> None:
+        chunks = [
+            {
+                "chunk_index": 8,
+                "_normalized_concepts": ["predominator"],
+                "definitions": [],
+                "technical_rules": [],
+                "procedures": [],
+                "terminology": ["Predominator"],
+                "examples": [],
+                "relationships": [],
+                "decision_rules": [
+                    {
+                        "condition": "the sect light is cadent",
+                        "outcome": "examine the contrary light",
+                        "related_steps": [],
+                    },
+                    {
+                        "condition": "both lights are cadent",
+                        "outcome": "the Ascendant has the predomination",
+                        "related_steps": [],
+                    },
+                ],
+                "preconditions": [],
+                "exceptions": [],
+                "author_variants": [],
+                "procedure_outputs": [],
+            }
+        ]
+
+        merged = merge_concept_knowledge({"predominator": [8]}, chunks)
+
+        self.assertEqual(
+            [step["text"] for step in merged["predominator"]["shared_procedure"]],
+            [
+                "If the sect light is cadent, then examine the contrary light",
+                "If both lights are cadent, then the Ascendant has the predomination",
+            ],
+        )
+
+    def test_merge_concept_knowledge_keeps_shared_procedure_empty_when_multiple_authors_present(self) -> None:
+        chunks = [
+            {
+                "chunk_index": 8,
+                "_normalized_concepts": ["predominator"],
+                "definitions": [],
+                "technical_rules": [],
+                "procedures": [],
+                "terminology": ["Predominator"],
+                "examples": [],
+                "relationships": [],
+                "decision_rules": [
+                    {
+                        "condition": "the sect light is cadent",
+                        "outcome": "examine the contrary light",
+                        "related_steps": [],
+                    },
+                    {
+                        "condition": "both lights are cadent",
+                        "outcome": "the Ascendant has the predomination",
+                        "related_steps": [],
+                    },
+                ],
+                "preconditions": [],
+                "exceptions": [],
+                "author_variants": [
+                    {"author": "Porphyry", "kind": "variant", "text": "Porphyry variant", "related_steps": []},
+                    {"author": "Valens", "kind": "variant", "text": "Valens variant", "related_steps": []},
+                ],
+                "procedure_outputs": [],
+            }
+        ]
+
+        merged = merge_concept_knowledge({"predominator": [8]}, chunks)
+
+        self.assertEqual(merged["predominator"]["shared_procedure"], [])
+
+    def test_merge_concept_knowledge_matches_procedural_aliases_to_anchor_concept(self) -> None:
+        chunks = [
+            {
+                "chunk_index": 8,
+                "concepts": ["Predomination of the light in a chart"],
+                "_normalized_concepts": ["predomination of the light in a chart"],
+                "definitions": [],
+                "technical_rules": [],
+                "procedures": [],
+                "terminology": [],
+                "examples": [],
+                "relationships": [],
+                "decision_rules": [
+                    {
+                        "condition": "the sect light is cadent",
+                        "outcome": "examine the contrary light",
+                        "related_steps": [],
+                    }
+                ],
+                "preconditions": [],
+                "exceptions": [],
+                "author_variants": [],
+                "procedure_outputs": [],
+            }
+        ]
+
+        merged = merge_concept_knowledge({"predominator": [8]}, chunks)
+
+        self.assertEqual(len(merged["predominator"]["decision_rules"]), 1)
+        self.assertEqual(
+            merged["predominator"]["decision_rules"][0]["outcome"],
+            "examine the contrary light",
+        )
+
+    def test_merge_concept_knowledge_serializes_existing_if_rules_without_double_if(self) -> None:
+        chunks = [
+            {
+                "chunk_index": 8,
+                "_normalized_concepts": ["predominator"],
+                "definitions": [],
+                "technical_rules": [],
+                "procedures": [],
+                "terminology": [],
+                "examples": [],
+                "relationships": [],
+                "decision_rules": [
+                    {
+                        "condition": "If the Moon is ascending in the east",
+                        "outcome": "the Moon will be the Predominator",
+                        "related_steps": [],
+                    }
+                ],
+                "preconditions": [],
+                "exceptions": [],
+                "author_variants": [],
+                "procedure_outputs": [],
+            }
+        ]
+
+        merged = merge_concept_knowledge({"predominator": [8]}, chunks)
+
+        self.assertEqual(
+            merged["predominator"]["procedures"],
+            ["If the Moon is ascending in the east, then the Moon will be the Predominator."],
+        )
+
+    def test_merge_concept_knowledge_does_not_fallback_procedural_rules_into_house_system(self) -> None:
+        chunks = [
+            {
+                "chunk_index": 8,
+                "concepts": ["Predominator", "House system"],
+                "_normalized_concepts": ["predominator", "house system"],
+                "definitions": [],
+                "technical_rules": [],
+                "procedures": [],
+                "terminology": [],
+                "examples": [],
+                "relationships": [],
+                "decision_rules": [
+                    {
+                        "condition": "both lights are cadent",
+                        "outcome": "the Ascendant has the predomination",
+                        "related_steps": [],
+                    }
+                ],
+                "preconditions": [],
+                "exceptions": [],
+                "author_variants": [],
+                "procedure_outputs": [],
+            }
+        ]
+
+        merged = merge_concept_knowledge({"house system": [8]}, chunks)
+
+        self.assertEqual(merged["house system"]["decision_rules"], [])
+
+    def test_merge_concept_knowledge_does_not_fallback_procedural_rules_into_oikodespotes(self) -> None:
+        chunks = [
+            {
+                "chunk_index": 8,
+                "concepts": ["Predominator", "Oikodespotes"],
+                "_normalized_concepts": ["predominator", "oikodespotes"],
+                "definitions": [],
+                "technical_rules": [],
+                "procedures": [],
+                "terminology": [],
+                "examples": [],
+                "relationships": [],
+                "decision_rules": [
+                    {
+                        "condition": "both lights are cadent",
+                        "outcome": "the Ascendant has the predomination",
+                        "related_steps": [],
+                    }
+                ],
+                "preconditions": [],
+                "exceptions": [],
+                "author_variants": [],
+                "procedure_outputs": [],
+            }
+        ]
+
+        merged = merge_concept_knowledge({"oikodespotes": [8]}, chunks)
+
+        self.assertEqual(merged["oikodespotes"]["decision_rules"], [])
 
     def test_merge_concept_knowledge_projects_chunk_payload_per_concept(self) -> None:
         chunks = [
@@ -683,6 +940,94 @@ class KnowledgeConsolidatorTests(unittest.TestCase):
             self.assertIn("lunar motion", ontology_exported)
             self.assertEqual(ontology_exported["lunar motion"]["node_kind"], "family")
             self.assertEqual(ontology_exported["void in course moon"]["belongs_to_families"], ["lunar motion"])
+
+    def test_build_knowledge_family_candidates_writes_validated_artifact(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            base = Path(tmpdir)
+            chunks_path = base / "Ancient Astrology - Vol 2_knowledge_chunks.jsonl"
+            audit_path = base / "Ancient Astrology - Vol 2_knowledge_audit.jsonl"
+            _write_jsonl(
+                chunks_path,
+                [
+                    {
+                        "chunk_id": "chunk_5_0_100",
+                        "concepts": ["Electional chart", "Inception", "Hour marker", "Angle"],
+                        "definitions": [
+                            "Electional chart: Chart chosen for an action.",
+                            "Inception: A chart for the start of an event.",
+                            "Hour marker: The horoskopos or ascending degree.",
+                            "Angle: A fundamental chart point.",
+                        ],
+                        "technical_rules": [],
+                        "procedures": [],
+                        "terminology": ["Electional chart", "Inception", "Hour marker", "Angle"],
+                        "relationships": [],
+                        "examples": [],
+                        "ambiguities": [],
+                    }
+                ],
+            )
+            _write_jsonl(
+                audit_path,
+                [{"chunk_id": "chunk_5_0_100", "chunk_index": 6, "decision": "extract"}],
+            )
+
+            def _fake_llm(_: str) -> str:
+                return json.dumps(
+                    {
+                        "candidate_families": [
+                            {
+                                "family_label": "event timing applications",
+                                "members": ["electional chart", "inception", "hour marker"],
+                                "rationale": "Techniques for timing or charting events.",
+                            }
+                        ],
+                        "left_unclustered": ["angle"],
+                    }
+                )
+
+            output_path = build_knowledge_family_candidates(str(chunks_path), llm_callable=_fake_llm)
+            exported = json.loads(Path(output_path).read_text(encoding="utf-8"))
+
+            self.assertTrue(output_path.endswith("_knowledge_family_candidates.json"))
+            self.assertEqual(exported["summary"]["candidate_count_accepted"], 0)
+            self.assertEqual(exported["candidate_families"], [])
+            self.assertEqual(exported["left_unclustered"], [])
+
+    def test_build_knowledge_ontology_exports_empty_family_candidates_when_discovery_fails(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            base = Path(tmpdir)
+            chunks_path = base / "Ancient Astrology - Vol 2_knowledge_chunks.jsonl"
+            audit_path = base / "Ancient Astrology - Vol 2_knowledge_audit.jsonl"
+            _write_jsonl(
+                chunks_path,
+                [
+                    {
+                        "chunk_id": "chunk_5_0_100",
+                        "concepts": ["Angle"],
+                        "definitions": ["Angle: A fundamental chart point."],
+                        "technical_rules": [],
+                        "procedures": [],
+                        "terminology": ["Angle"],
+                        "relationships": [],
+                        "examples": [],
+                        "ambiguities": [],
+                    }
+                ],
+            )
+            _write_jsonl(
+                audit_path,
+                [{"chunk_id": "chunk_5_0_100", "chunk_index": 6, "decision": "extract"}],
+            )
+
+            ontology_output_path = build_knowledge_ontology(str(chunks_path))
+            candidates_exported = json.loads(
+                Path(build_family_candidates_output_path(str(chunks_path))).read_text(encoding="utf-8")
+            )
+
+            self.assertTrue(Path(ontology_output_path).exists())
+            self.assertEqual(candidates_exported["candidate_families"], [])
+            self.assertEqual(candidates_exported["left_unclustered"], [])
 
     def test_build_knowledge_ontology_keeps_legacy_behavior_when_inferred_taxonomy_flag_is_off(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:

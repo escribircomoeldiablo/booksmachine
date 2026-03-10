@@ -141,11 +141,56 @@ class PipelineKnowledgeExtractionTests(unittest.TestCase):
                 self.assertIn("chunk_id", record)
                 self.assertIn("source_fingerprint", record)
                 self.assertIn("section_refs", record)
-                self.assertEqual(record["schema_version"], "1.0.0")
+                self.assertEqual(record["schema_version"], "2.0.0")
                 self.assertIn("concepts", record)
                 self.assertIn("technical_rules", record)
             audit_lines = [line for line in audit_path.read_text(encoding="utf-8").splitlines() if line.strip()]
             self.assertEqual(len(audit_lines), 2)
+
+    def test_pipeline_passes_knowledge_language_to_extractor_and_persists_it_in_manifest(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            with (
+                patch("src.pipeline.OUTPUT_FOLDER", tmpdir),
+                patch("src.pipeline.KNOWLEDGE_EXTRACTION_ENABLED", True),
+                patch("src.pipeline.KNOWLEDGE_PRECHECK_ENABLED", False),
+            ):
+                with patch("src.pipeline.load_book", return_value="source text"):
+                    with patch("src.pipeline.split_into_chunks", return_value=["c1"]):
+                        with patch(
+                            "src.pipeline.extract_chunk_knowledge",
+                            return_value=ExtractionResult(
+                                record=_record("legacy_chunk_1", "book_hash"),
+                                parse_error=None,
+                                used_fallback=False,
+                            ),
+                        ) as extract_mock:
+                            with patch(
+                                "src.pipeline.synthesize_blocks",
+                                return_value=(
+                                    [
+                                        {
+                                            "block_index": 1,
+                                            "chunk_start": 1,
+                                            "chunk_end": 1,
+                                            "chunk_indices": [1],
+                                            "summary_text": "block::1",
+                                        }
+                                    ],
+                                    1,
+                                ),
+                            ), patch("src.pipeline.synthesize_compendium", return_value=("compendium::global", 0)):
+                                process_book(
+                                    "books/sample_book.txt",
+                                    verbose=False,
+                                    output_language="es",
+                                    knowledge_language="original",
+                                )
+
+            self.assertEqual(extract_mock.call_args.kwargs["knowledge_language"], "original")
+            manifest_path = next((Path(tmpdir) / ".checkpoints").glob("**/knowledge/**/manifest.json"))
+            manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+            self.assertEqual(manifest["output_language"], "es")
+            self.assertEqual(manifest["knowledge_language"], "original")
 
     def test_checkpoint_namespaces_are_separated_by_mode(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:

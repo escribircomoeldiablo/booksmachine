@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Manual Explorer</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='explorer.css') }}" />
+  </head>
+  <body>
+    <div class="shell">
+      <header class="header">
+        <div>
+          <p class="eyebrow">Booksmachine</p>
+          <h1>Manual Explorer</h1>
+          <p id="book-meta" class="muted">Cargando artifacts...</p>
+        </div>
+        <div class="header-controls">
+          <label class="field">
+            <span>Libro</span>
+            <select id="book-select"></select>
+          </label>
+          <label class="field search-field">
+            <span>Búsqueda global</span>
+            <input id="search-input" type="search" placeholder="concepto, terminología, familia" />
+          </label>
+          <div id="search-results" class="search-results hidden"></div>
+        </div>
+      </header>
+
+      <main class="grid">
+        <section class="panel panel-families">
+          <div class="panel-head">
+            <h2>Familias doctrinales</h2>
+            <span id="family-count" class="pill"></span>
+          </div>
+          <div id="family-list" class="family-list"></div>
+        </section>
+
+        <section class="panel panel-tree">
+          <div class="panel-head">
+            <h2>Arbol conceptual</h2>
+            <span id="tree-family" class="pill"></span>
+          </div>
+          <div id="tree-view" class="tree-view"></div>
+        </section>
+
+        <section class="panel panel-concept">
+          <div id="concept-card" class="concept-card"></div>
+        </section>
+
+        <section class="panel panel-evidence">
+          <div class="panel-head">
+            <h2>Bloques del manual</h2>
+            <span id="evidence-count" class="pill"></span>
+          </div>
+          <div id="evidence-view" class="evidence-view"></div>
+        </section>
+      </main>
+    </div>
+
+    <script src="{{ url_for('static', filename='explorer.js') }}"></script>
+  </body>
+</html>

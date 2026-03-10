@@ -55,6 +55,25 @@ class ConceptCanonicalizerTests(unittest.TestCase):
         self.assertEqual(canonicalize_concept_name("cadent house"), "cadent houses")
         self.assertEqual(canonicalize_concept_name("derived house"), "derived houses")
 
+    def test_canonicalize_concept_name_maps_house_favorability_family_to_closed_forms(self) -> None:
+        self.assertEqual(canonicalize_concept_name("fortunate and unfortunate houses"), "favorability of house")
+        self.assertEqual(canonicalize_concept_name("good houses"), "benefic houses")
+        self.assertEqual(canonicalize_concept_name("bad houses or places"), "malefic houses")
+
+    def test_canonicalize_concept_name_merges_predominator_variants(self) -> None:
+        self.assertEqual(canonicalize_concept_name("predominance of light"), "predominator")
+        self.assertEqual(canonicalize_concept_name("Predominantia de la luz del secto"), "predominator")
+        self.assertEqual(canonicalize_concept_name("Predomination of the sect light in day and night charts"), "predominator")
+        self.assertEqual(canonicalize_concept_name("Predominator (Epikratetor)"), "predominator")
+        self.assertEqual(
+            canonicalize_concept_name("Procedimiento para determinar la luz predominante en carta diurna según Antiochus y Porphyry"),
+            "predominator",
+        )
+        self.assertEqual(
+            canonicalize_concept_name("Oikodespotes as a lord assigned by the Predominator that apportions years of life"),
+            "oikodespotes",
+        )
+
     def test_canonicalize_concepts_merges_entries_that_collapse_to_same_key(self) -> None:
         concepts = {
             "historical usage and debate on house system": _payload(

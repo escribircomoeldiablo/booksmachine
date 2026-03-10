@@ -14,6 +14,8 @@ def main() -> None:
     parser.add_argument("--no-resume", action="store_true")
     parser.add_argument("--quiet", action="store_true")
     parser.add_argument("--output-language", choices=["es", "original"], default="es")
+    parser.add_argument("--knowledge-language", choices=["original", "es"], default="original")
+    parser.add_argument("--output-folder", default=None)
     args = parser.parse_args()
 
     process_book(
@@ -24,6 +26,8 @@ def main() -> None:
         verbose=not args.quiet,
         resume=not args.no_resume,
         output_language=args.output_language,
+        knowledge_language=args.knowledge_language,
+        output_folder=args.output_folder,
     )
 
 

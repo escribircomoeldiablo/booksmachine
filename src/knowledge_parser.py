@@ -7,7 +7,13 @@ from dataclasses import dataclass
 
 from .knowledge_schema import (
     CHUNK_KNOWLEDGE_SCHEMA_VERSION,
+    LEGACY_CHUNK_KNOWLEDGE_SCHEMA_VERSION,
+    AuthorVariant,
     ChunkKnowledgeV1,
+    DecisionRule,
+    ProcedureCondition,
+    ProcedureOutput,
+    ProcedureStep,
     SectionRef,
     make_empty_chunk_knowledge,
 )
@@ -22,12 +28,21 @@ _ARRAY_FIELDS = {
     "examples",
     "ambiguities",
 }
+_STRUCTURED_FIELDS = {
+    "procedure_steps",
+    "decision_rules",
+    "preconditions",
+    "exceptions",
+    "author_variants",
+    "procedure_outputs",
+}
 _ALLOWED_KEYS = {
     "schema_version",
     "chunk_id",
     "source_fingerprint",
     "section_refs",
     *_ARRAY_FIELDS,
+    *_STRUCTURED_FIELDS,
 }
 
 
@@ -133,6 +148,130 @@ def _normalize_string_list(record: dict[str, object], field_name: str) -> list[s
     return normalized
 
 
+def _normalize_related_steps(value: object, field_name: str) -> list[str]:
+    if value is None:
+        return []
+    if not isinstance(value, list):
+        raise ValueError(f"{field_name}.related_steps must be an array")
+    output: list[str] = []
+    for idx, item in enumerate(value):
+        if isinstance(item, (int, float)):
+            text = str(int(item)) if isinstance(item, float) and item.is_integer() else str(item)
+        elif isinstance(item, str):
+            text = item.strip()
+        else:
+            raise ValueError(f"{field_name}.related_steps[{idx}] must be a string")
+        if not text:
+            raise ValueError(f"{field_name}.related_steps[{idx}] must be a string")
+        output.append(text)
+    return output
+
+
+def _expect_optional_str(item: dict[str, object], key: str) -> str:
+    value = item.get(key, "")
+    if value is None:
+        return ""
+    if not isinstance(value, str):
+        raise ValueError(f"{key} must be a string")
+    return value.strip()
+
+
+def _normalize_procedure_steps(record: dict[str, object]) -> list[ProcedureStep]:
+    value = record.get("procedure_steps", [])
+    if value is None:
+        raise ValueError("procedure_steps must be an array, got null")
+    if not isinstance(value, list):
+        raise ValueError("procedure_steps must be an array")
+    normalized: list[ProcedureStep] = []
+    for idx, item in enumerate(value):
+        if not isinstance(item, dict):
+            raise ValueError(f"procedure_steps[{idx}] must be an object")
+        text = _expect_str(item.get("text"), f"procedure_steps[{idx}].text")
+        order_value = item.get("order")
+        if not isinstance(order_value, int):
+            raise ValueError(f"procedure_steps[{idx}].order must be int")
+        step_id = _expect_optional_str(item, "id")
+        normalized.append(ProcedureStep(id=step_id, order=order_value, text=text))
+    return normalized
+
+
+def _normalize_decision_rules(record: dict[str, object]) -> list[DecisionRule]:
+    value = record.get("decision_rules", [])
+    if value is None:
+        raise ValueError("decision_rules must be an array, got null")
+    if not isinstance(value, list):
+        raise ValueError("decision_rules must be an array")
+    normalized: list[DecisionRule] = []
+    for idx, item in enumerate(value):
+        if not isinstance(item, dict):
+            raise ValueError(f"decision_rules[{idx}] must be an object")
+        normalized.append(
+            DecisionRule(
+                condition=_expect_str(item.get("condition"), f"decision_rules[{idx}].condition"),
+                outcome=_expect_str(item.get("outcome"), f"decision_rules[{idx}].outcome"),
+                related_steps=_normalize_related_steps(item.get("related_steps", []), f"decision_rules[{idx}]"),
+            )
+        )
+    return normalized
+
+
+def _normalize_condition_list(record: dict[str, object], field_name: str) -> list[ProcedureCondition]:
+    value = record.get(field_name, [])
+    if value is None:
+        raise ValueError(f"{field_name} must be an array, got null")
+    if not isinstance(value, list):
+        raise ValueError(f"{field_name} must be an array")
+    normalized: list[ProcedureCondition] = []
+    for idx, item in enumerate(value):
+        if not isinstance(item, dict):
+            raise ValueError(f"{field_name}[{idx}] must be an object")
+        normalized.append(
+            ProcedureCondition(
+                text=_expect_str(item.get("text"), f"{field_name}[{idx}].text"),
+                scope=_expect_optional_str(item, "scope"),
+                related_steps=_normalize_related_steps(item.get("related_steps", []), f"{field_name}[{idx}]"),
+            )
+        )
+    return normalized
+
+
+def _normalize_author_variants(record: dict[str, object]) -> list[AuthorVariant]:
+    value = record.get("author_variants", [])
+    if value is None:
+        raise ValueError("author_variants must be an array, got null")
+    if not isinstance(value, list):
+        raise ValueError("author_variants must be an array")
+    normalized: list[AuthorVariant] = []
+    for idx, item in enumerate(value):
+        if not isinstance(item, dict):
+            raise ValueError(f"author_variants[{idx}] must be an object")
+        normalized.append(
+            AuthorVariant(
+                author=_expect_str(item.get("author"), f"author_variants[{idx}].author"),
+                kind=_expect_str(item.get("kind"), f"author_variants[{idx}].kind"),
+                text=_expect_str(item.get("text"), f"author_variants[{idx}].text"),
+                related_steps=_normalize_related_steps(item.get("related_steps", []), f"author_variants[{idx}]"),
+            )
+        )
+    return normalized
+
+
+def _normalize_procedure_outputs(record: dict[str, object]) -> list[ProcedureOutput]:
+    value = record.get("procedure_outputs", [])
+    if value is None:
+        raise ValueError("procedure_outputs must be an array, got null")
+    if not isinstance(value, list):
+        raise ValueError("procedure_outputs must be an array")
+    normalized: list[ProcedureOutput] = []
+    for idx, item in enumerate(value):
+        if not isinstance(item, dict):
+            raise ValueError(f"procedure_outputs[{idx}] must be an object")
+        normalized.append(
+            ProcedureOutput(text=_expect_str(item.get("text"), f"procedure_outputs[{idx}].text"))
+        )
+    return normalized
+
+
 def _normalize_section_refs(value: object) -> list[SectionRef]:
     if value is None:
         raise ValueError("section_refs must be an array, got null")
@@ -181,9 +320,9 @@ def validate_chunk_knowledge(record: dict[str, object]) -> ChunkKnowledgeV1:
         raise ValueError(f"Unexpected keys in chunk knowledge payload: {extras}")
 
     schema_version = record.get("schema_version")
-    if schema_version != CHUNK_KNOWLEDGE_SCHEMA_VERSION:
+    if schema_version not in {CHUNK_KNOWLEDGE_SCHEMA_VERSION, LEGACY_CHUNK_KNOWLEDGE_SCHEMA_VERSION}:
         raise ValueError(
-            f"schema_version must be '{CHUNK_KNOWLEDGE_SCHEMA_VERSION}', got {schema_version!r}"
+            f"schema_version must be '{CHUNK_KNOWLEDGE_SCHEMA_VERSION}' or '{LEGACY_CHUNK_KNOWLEDGE_SCHEMA_VERSION}', got {schema_version!r}"
         )
 
     chunk_id = _expect_str(record.get("chunk_id"), "chunk_id")
@@ -203,6 +342,12 @@ def validate_chunk_knowledge(record: dict[str, object]) -> ChunkKnowledgeV1:
         relationships=_normalize_string_list(record, "relationships"),
         examples=_normalize_string_list(record, "examples"),
         ambiguities=_normalize_string_list(record, "ambiguities"),
+        procedure_steps=_normalize_procedure_steps(record),
+        decision_rules=_normalize_decision_rules(record),
+        preconditions=_normalize_condition_list(record, "preconditions"),
+        exceptions=_normalize_condition_list(record, "exceptions"),
+        author_variants=_normalize_author_variants(record),
+        procedure_outputs=_normalize_procedure_outputs(record),
     )
 
 
@@ -241,6 +386,9 @@ def parse_chunk_knowledge_json(
             ],
         )
         for field_name in _ARRAY_FIELDS:
+            if field_name not in parsed:
+                parsed[field_name] = []
+        for field_name in _STRUCTURED_FIELDS:
             if field_name not in parsed:
                 parsed[field_name] = []
         if "schema_version" not in parsed:

@@ -2,7 +2,7 @@
   {
     "id": "house_classification",
     "label": "house classification",
-    "aliases": ["angular houses", "succedent houses", "cadent houses"]
+    "aliases": ["angular houses", "succedent houses", "cadent houses", "epanaphora", "angularity"]
   },
   {
     "id": "planetary_phases",
@@ -21,7 +21,17 @@
       "phasis",
       "solar phase cycle",
       "in heart cazimi",
-      "combust"
+      "combust",
+      "evening star",
+      "greatest elongation",
+      "increasing in light",
+      "curtailed passage",
+      "combustion",
+      "eclipse",
+      "phase transition intensification",
+      "phasis condition",
+      "planetary phase transition",
+      "bending of moon"
     ],
     "controlled_patterns": [
       "heliacal morning rise",
@@ -32,7 +42,7 @@
   {
     "id": "lunar_motion",
     "label": "lunar motion",
-    "aliases": ["void in course moon", "lunar application", "lunar separation"]
+    "aliases": ["void in course moon", "lunar application", "lunar separation", "moon void in course"]
   },
   {
     "id": "aspect_dynamics",
@@ -41,13 +51,30 @@
       "application",
       "separation",
       "applying aspect",
-      "separating aspect"
+      "separating aspect",
+      "partile aspect",
+      "parallage"
     ]
   },
   {
     "id": "maltreatment",
     "label": "maltreatment",
-    "aliases": ["striking with ray", "maltreatment by opposition"]
+    "aliases": [
+      "striking with ray",
+      "maltreatment by opposition",
+      "maltreatment by adherence",
+      "maltreatment by aspect ray",
+      "maltreatment kakosis"
+    ]
+  },
+  {
+    "id": "bonification",
+    "label": "bonification",
+    "aliases": [
+      "bonification",
+      "bonification by aspect ray",
+      "bonification by striking with ray"
+    ]
   },
   {
     "id": "sect",
@@ -72,7 +99,25 @@
       "adherence",
       "assembly",
       "diameter",
-      "hexagon"
+      "hexagon",
+      "hurling ray",
+      "enclosure",
+      "containment",
+      "connection",
+      "counteraction",
+      "flowing away",
+      "intervention interposition",
+      "separating aporrhoia",
+      "inferior",
+      "adherence kollesis",
+      "assembly sunodo",
+      "enclosure eniperischesis",
+      "flowing apart aporroia",
+      "juxtaposition or neighboring homoresis",
+      "separation aporroia"
+    ],
+    "controlled_patterns": [
+      "intervention"
     ],
     "notes": "Aspectual and configurational relations with explicit technical names."
   },
@@ -90,9 +135,19 @@
       "bound lord rulership system",
       "decan face",
       "dispositor",
-      "almuten"
+      "almuten",
+      "lord lady of zodiacal sign",
+      "chariot",
+      "zodiacal domicile"
     ],
     "notes": "Essential dignities, debilities, and dignity-based rulership terms."
+  },
+  {
+    "id": "planetary_orders",
+    "label": "planetary orders",
+    "aliases": [
+      "chaldean order"
+    ]
   },
   {
     "id": "lots",
@@ -104,5 +159,178 @@
       "lot of spirit daimon"
     ],
     "notes": "Arabic parts and named lots with explicit technical labels."
+  },
+  {
+    "id": "motion",
+    "label": "planetary motion",
+    "aliases": [
+      "direct motion",
+      "primary motion"
+    ]
+  },
+  {
+    "id": "time_lord_systems",
+    "label": "time lord techniques",
+    "aliases": [
+      "profection",
+      "decennial",
+      "annual lord of year"
+    ]
+  },
+  {
+    "id": "chart_authorities",
+    "label": "chart authorities",
+    "aliases": [
+      "master of nativity",
+      "joint master of nativity",
+      "lord of nativity",
+      "hyleg",
+      "predominator",
+      "oikodespotes",
+      "lord of fortune"
+    ]
+  },
+  {
+    "id": "celestial_coordinates",
+    "label": "celestial coordinate system",
+    "aliases": [
+      "celestial equator",
+      "celestial latitude",
+      "celestial longitude",
+      "easterly direction"
+    ]
+  },
+  {
+    "id": "astrological_timing_techniques",
+    "label": "astrological timing techniques",
+    "aliases": [
+      "primary direction",
+      "progression",
+      "prenatal lunation",
+      "loosing bond",
+      "minor year of planet"
+    ]
+  },
+  {
+    "id": "house_qualities",
+    "label": "house qualities",
+    "aliases": [
+      "good house",
+      "benefic houses",
+      "malefic houses",
+      "bad house or place",
+      "chrematistikos"
+    ],
+    "controlled_patterns": [
+      "bad house"
+    ]
+  },
+  {
+    "id": "zodiac_signs",
+    "label": "zodiac signs",
+    "aliases": [
+      "gemini",
+      "leo",
+      "libra"
+    ]
+  },
+  {
+    "id": "planets",
+    "label": "planets",
+    "aliases": [
+      "jupiter"
+    ]
+  },
+  {
+    "id": "chart_angles",
+    "label": "chart angles and axes",
+    "aliases": [
+      "angle",
+      "hour marker",
+      "ic imum coeli",
+      "line of horizon"
+    ]
+  },
+  {
+    "id": "house_systems",
+    "label": "house systems",
+    "aliases": [
+      "house system",
+      "quadrant house"
+    ]
+  },
+  {
+    "id": "sign_qualities",
+    "label": "sign qualities",
+    "aliases": [
+      "bi corporeal",
+      "gender"
+    ]
+  },
+  {
+    "id": "planetary_beneficence",
+    "label": "planetary beneficence",
+    "aliases": [
+      "benefic",
+      "malefic"
+    ]
+  },
+  {
+    "id": "planetary_conditions",
+    "label": "planetary conditions",
+    "aliases": [
+      "planetary celestial condition"
+    ]
+  },
+  {
+    "id": "luminaries",
+    "label": "luminaries",
+    "aliases": [
+      "luminary light",
+      "light luminarie"
+    ]
+  },
+  {
+    "id": "planetary_joys",
+    "label": "joy conditions",
+    "aliases": [
+      "joy"
+    ]
+  },
+  {
+    "id": "planetary_affinities",
+    "label": "planetary affinities",
+    "aliases": [
+      "familiarity"
+    ]
+  },
+  {
+    "id": "planetary_hours",
+    "label": "planetary hours",
+    "aliases": [
+      "hour"
+    ]
+  },
+  {
+    "id": "astronomical_cycles",
+    "label": "astronomical cycles",
+    "aliases": [
+      "precession"
+    ]
+  },
+  {
+    "id": "zodiac_systems",
+    "label": "zodiac systems",
+    "aliases": [
+      "sidereal and tropical zodiac system"
+    ]
+  },
+  {
+    "id": "electional_astrology",
+    "label": "electional astrology",
+    "aliases": [
+      "electional chart",
+      "inception"
+    ]
   }
 ]

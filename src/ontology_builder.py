@@ -13,6 +13,14 @@ CONSOLIDATED_FIELDS: tuple[str, ...] = (
     "examples",
     "relationships",
 )
+PROCEDURAL_FIELDS: tuple[str, ...] = (
+    "shared_procedure",
+    "decision_rules",
+    "preconditions",
+    "exceptions",
+    "author_variant_overrides",
+    "procedure_outputs",
+)
 
 ONTOLOGY_FIELDS: tuple[str, ...] = (
     "family_id",
@@ -28,6 +36,12 @@ ONTOLOGY_FIELDS: tuple[str, ...] = (
     "related_concepts",
     "belongs_to_families",
     "family_members",
+    "shared_procedure",
+    "decision_rules",
+    "preconditions",
+    "exceptions",
+    "author_variant_overrides",
+    "procedure_outputs",
 )
 
 _EQUIVALENCE_FAMILIES: tuple[tuple[str, tuple[str, ...]], ...] = (
@@ -81,6 +95,12 @@ def _new_ontology_node(concept: str) -> dict[str, object]:
         "terminology": [],
         "examples": [],
         "relationships": [],
+        "shared_procedure": [],
+        "decision_rules": [],
+        "preconditions": [],
+        "exceptions": [],
+        "author_variant_overrides": [],
+        "procedure_outputs": [],
         "source_chunks": [],
         "parent_concepts": [],
         "child_concepts": [],
@@ -95,6 +115,8 @@ def _copy_to_ontology_node(payload: dict[str, object], *, concept: str) -> dict[
     node = _new_ontology_node(concept)
     for field_name in CONSOLIDATED_FIELDS:
         node[field_name] = list(payload.get(field_name, []))
+    for field_name in PROCEDURAL_FIELDS:
+        node[field_name] = list(payload.get(field_name, []))
     node["source_chunks"] = list(payload.get("source_chunks", []))
     return node
 
@@ -102,6 +124,12 @@ def _copy_to_ontology_node(payload: dict[str, object], *, concept: str) -> dict[
 def _merge_concept_payload(target: dict[str, object], source: dict[str, object]) -> None:
     for field_name in CONSOLIDATED_FIELDS:
         target[field_name] = _dedupe_preserve_order(list(target[field_name]) + list(source.get(field_name, [])))
+    for field_name in PROCEDURAL_FIELDS:
+        deduped: list[object] = []
+        for item in list(target[field_name]) + list(source.get(field_name, [])):
+            if item not in deduped:
+                deduped.append(item)
+        target[field_name] = deduped
 
     target["source_chunks"] = _dedupe_ints_sorted(
         list(target["source_chunks"]) + list(source.get("source_chunks", []))
@@ -237,6 +265,12 @@ def apply_family_memberships(
         payload.setdefault("terminology", [])
         payload.setdefault("examples", [])
         payload.setdefault("relationships", [])
+        payload.setdefault("shared_procedure", [])
+        payload.setdefault("decision_rules", [])
+        payload.setdefault("preconditions", [])
+        payload.setdefault("exceptions", [])
+        payload.setdefault("author_variant_overrides", [])
+        payload.setdefault("procedure_outputs", [])
         payload.setdefault("source_chunks", [])
         payload.setdefault("parent_concepts", [])
         payload.setdefault("child_concepts", [])

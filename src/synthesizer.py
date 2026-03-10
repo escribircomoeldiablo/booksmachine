@@ -19,7 +19,8 @@ def _block_output_style(output_language: str) -> str:
     return (
         "Devuelve una sintesis estructurada y concisa en espanol, con encabezados claros y "
         "puntos. Evita repetir ideas equivalentes. Conserva sin traducir palabras en latin "
-        "y terminos que deban mantenerse en su idioma original por contexto."
+        "y terminos que deban mantenerse en su idioma original por contexto. No colapses "
+        "multiples pasos estructurados en un solo parrafo ni mezcles variantes de autores."
     )
 
 
@@ -34,7 +35,8 @@ def _compendium_output_style(output_language: str) -> str:
         "Devuelve un compendio global coherente en espanol, con jerarquia clara y sin "
         "redundancia. Usa solo informacion presente en los resumenes de bloques. Conserva "
         "sin traducir palabras en latin y terminos que deban mantenerse en su idioma original "
-        "por contexto."
+        "por contexto. Conserva pasos, reglas de decision, precondiciones, excepciones y "
+        "variantes por autor como secciones separadas; no las reduzcas a prosa libre."
     )
 
 
@@ -96,6 +98,7 @@ def build_block_prompt(
         "Eres un asistente de sintesis tecnica.",
         f"Sintetiza el Bloque {block_index} a partir de los siguientes resumenes de chunks.",
         _block_output_style(output_language),
+        "Preserva secciones estructuradas de procedimiento. Si no hay base compartida suficiente, manten variantes separadas.",
         "",
         "Resumenes de chunks:",
     ]
@@ -155,6 +158,7 @@ def build_compendium_prompt(
         "Eres un asistente de sintesis tecnica.",
         "Crea el compendio global final a partir de estos resumenes de bloques.",
         _compendium_output_style(output_language),
+        "No conviertas multiples pasos estructurados en un unico parrafo resumen.",
         "",
         "Resumenes de bloques:",
     ]

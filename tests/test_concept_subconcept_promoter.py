@@ -154,6 +154,46 @@ class ConceptSubconceptPromoterTests(unittest.TestCase):
             ["Benefic houses: houses favorable to the life of the individual."],
         )
 
+    def test_promotes_favorability_parent_and_children_from_closed_house_fortune_family(self) -> None:
+        concepts = {
+            "fortunate and unfortunate houses": _payload(
+                concept="fortunate and unfortunate houses",
+                source_chunks=[42],
+            ),
+            "good condition and bad condition of planets in houses": _payload(
+                concept="good condition and bad condition of planets in houses",
+                technical_rules=[
+                    "Benefic planets in good condition in fortunate houses produce best outcomes.",
+                    "Malefic planets in poor condition in unfavorable houses produce destructive outcomes.",
+                ],
+                source_chunks=[42],
+            ),
+            "good houses": _payload(
+                concept="good houses",
+                definitions=["good houses or places: Houses configured by whole-sign aspects to the Ascendant."],
+                source_chunks=[42, 85],
+            ),
+            "bad houses or places": _payload(
+                concept="bad houses or places",
+                definitions=["bad houses or places: Houses in aversion to the Ascendant."],
+                source_chunks=[42, 83],
+            ),
+        }
+
+        promoted = promote_taxonomy_subconcepts(concepts)
+        restored = restore_promoted_subconcepts(filter_valid_concepts(promoted), promoted)
+
+        self.assertIn("favorability of house", restored)
+        self.assertEqual(restored["favorability of house"]["_promotion_reason"], "family_child_support_parent")
+        self.assertEqual(
+            restored["favorability of house"]["terminology"],
+            ["Benefic houses", "Malefic houses"],
+        )
+        self.assertIn("benefic houses", promoted)
+        self.assertIn("malefic houses", promoted)
+        self.assertEqual(promoted["benefic houses"]["source_chunks"], [42, 85])
+        self.assertEqual(promoted["malefic houses"]["source_chunks"], [42, 83])
+
     def test_does_not_promote_terms_outside_allowlist(self) -> None:
         concepts = {
             "angularity of house": _payload(

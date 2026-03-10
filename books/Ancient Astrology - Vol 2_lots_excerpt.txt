@@ -1,0 +1,133 @@
+Introducing Lots
+THE LOT OF FORTUNE AND THE LORD OF FORTUNE
+TRADITIONAL ASTROLOGY INCLUDES THE USE OF MANY LOTS (KLEROl), which are often referred to as the Arabic Parts in contemporary astrology. Lots are sensitive points in a chart that were used to give additional information on a vast range of specific topics, such as the Lot of Children, the Lot of Marriage, the Lot of Siblings, the Lot of Injury, the Lot of Accusation, the Lot of Death, the Lot of Adultery, the Lot of Farming, the Lot of Sailing, and the Lot of Ene­ mies. Each Lot is derived mathematically from the distances between two plan­ ets or points in a chart, giving an arc of separation that is then projected from the Ascendant. The first and most important Lots originated from the earliest stratum of Hellenistic astrology, and were attributed to the legendary divinity,
+Hermes Trismegistus. Over time, Arabic and Medieval astrologers added many more Lots to the corpus. In the ninth century, Abu Mashar listed ninety-seven
+Lots that he found in the texts of the ancient astrologers from Persia, Babylonia,
+Egypt, and the Greeks.1
+A bu M a ’shar and other Arabic astrologers may well have had access to an extensive listing of the Lots contained in A Commentary on Paulus Alexandrians written by Olympiodorus as a series of lectures given in Alexandria from May to July of 564 ce . For English translations, see James H. H olden and Dorian G. Greenbaum .
+The Lot of Fortune (or Part of Fortune) is the most important of all the Lots.
+It indicates the relative fortune of wealth, material acquisitions, and well-being that a person might expect in life. It is often interpreted along with its domicile lord, the planet that rules the zodiacal sign in which it is located. The Lot and its lord were given great prominence and power in the overall assessment of the life as a whole. The domicile lord of Fortune was treated as equal in power to the lord of the Ascendant by Valens. This planet holds a global role in governing a persons life in terms of their overall prosperity and physical health. Before we discuss the lord of Fortune as a ruler of the nativity, we will first provide some background on what a Lot is, how it is derived, and how it is used.
+
+USE AND DETERMINATION OF LOTS
+When analyzing a topic of life or making a particular inquiry, many ancient astrologers used a general, three-pronged procedure. They investigated a given theme via:
+1. The house most appropriate to that theme, together with its lord 2. Hie planet most related to the theme, and 3. The Lot related to the theme
+However, it was said by ancient authors that sometimes the astrologer looked only to the Lot, its position, and its lord in order to judge the matter.
+Lots provide additional, more specific information for the matters of life that are signified by planets, houses, as well as other areas of interest not covered by the topics of the twelve houses. They add more finely tuned nuances to the interpretations of outcomes and help distinguish between the various topics of each house. For example, the fourth house and its lord signify both of the par­ ents, but the Lot of the Father and the Lot of the Mother give more details about each individual parent.
+When several factors for the judgment of a topic give conflicting indica­ tions as to the outcome, the Lot can help tip the scales. For example, a person might have a benefic planet in the seventh house of marriage, but the lord of the seventh house might be in poor condition, in a bad house, or in aversion to the seventh. If the Lot of Marriage and its lord are well placed, however, the judgment can still point towards an essentially fortunate marriage, albeit with possible challenges.
+Many astrologers learn the calculations for the Lots simply as formulas in­ volving the adding and subtracting of certain numbers obtained from the zodi­ acal degrees of certain planets. Abu Mashar offers a theoretical explanation for the thinking behind the innovation of Lots.2 Any combination of two planets results in a mixture of their mutual significations. The outcome of their inter­ action varies from chart to chart depending upon the distance between them (such as a square or trine), the direction from which a planet is approaching, and whether it is conjoined with or separating from the other planet (based on the natural order of the directional movement of the zodiac, not upon the rel­ ative speeds of planets in applying and separating aspects). Bonatti adds that a planet signifies one thing when it advances towards another planet, something
+A bu M a ’shar , Great Introduction 8.
+
+THE LORD OF FORTUNE 991 else when it is present with it, and something different again when it recedes or separates.3 In volume one, we discussed the different interpretations given when
+Jupiter, for example, overcomes Saturn on the right-hand side as contrasted with
+Saturn overcoming Jupiter.4 3 Bonatti , Book of Astronomy, 8.2.1.
+4 See volume 1, chapters 44-45·
+The indications of Lots involve subtle distinctions among the natures of the planets involved, and the qualities of the mutual interactions arising from their arc of separation. The planet that establishes the direction from which the inter­ val is counted, which determines the actual number of degrees between them, is also an important factor. For example, if the Sun is at 150 Virgo and the Moon is at 150 Scorpio, the distance from the Sun to the Moon is 6o°, while the distance from the Moon to the Sun, counting in the order of the signs, is 300°. This dis­ tinction is the basis of the different calculations for the Lot of Fortune in day births versus night births.
+Most of the Lots have different formulas for day and night births, in which the starting and ending planets are reversed. Usually the count starts from the planet that is stronger by sect and proceeds towards the other planet. For exam ­ ple, the Lot of Fortune is determined from the relationship between the two lu­ minaries. In diurnal births, the count begins with the Sun and proceeds towards the Moon, as the Sun is the stronger luminary by day. In nocturnal births, the count begins with the Moon and proceeds towards the Sun, because the Moon is more preeminent by night. The direction in which one counts will change the number of degrees in the arc of separation.
+The number of degrees between the two planets also shapes the quality of their interaction. A distance of around 90° (square), for instance, will influence the nature of the planetary interaction differently than a distance of around 120° (trine). Per the natures of the configurations they approximate, the distance of a trine is more affirmative, and the distance of a square is more negating.
+This arc of distance is then projected from the Ascendant—the most po­ tent and vital degree in any chart. Highly time-sensitive, the Ascendant is very unique to the individual due to the constantly changing degree of the horizon point (about one degree for every four minutes of time). Thus, while people born on the same day might have very similar planetary placements by sign, they will usually have very different Lot placements due to their Ascendant degrees.
+When the arc of separation is projected from the Ascendant, it falls at a specific point in the zodiacal wheel, which thus determines the location of the
+Lot. The spatial relationship between the two planets used to determine the Lot
+
+992 CHAPTER 88 is exactly mirrored in the relationship between the Ascendant and the Lot itself.
+Therefore, if the two planets used to determine a Lot have a square configuration, the Lot derived from them will also have a square configuration relative to the
+Ascendant.
+The interpretation of the Lot is based upon its sign, its house location, and the planetary ruler of the sign that the Lot occupies. Whether used together with other factors, or on its own, the Lot provides a very specific and person­ alized window into how the matter unfolds in that particular life. Some Lots involve calculations from a planet to the Lot of Fortune or to the Lot of Spirit, or to a particular house or to the lord of a particular house.
+THE SEVEN HERMETIC LOTS
+Each of the seven visible planets has a Lot that provides greater insight into its significations. Collectively, these seven Lots are known as the Hermetic Lots (Table 77). Paulus of Alexandria identified them by name and gave the calcula­ tions to determine their zodiacal positions (Table 78)? The formulas for calcu­ lating each of the Lots proceed as follows:
+1. First measure the distance between the two planets or points in the nat­ ural direction of the zodiacal order.
+2. Then project this distance from the degree of the Ascendant, again in zodiacal order.
+Note that the calculations for the Lots of the benefic planets employ the
+Lot of Spirit, while those for the Lots of the malefic planets (as well as Mercury) employ the Lot of Fortune.
+5 Paulus , Introduction, 23. For discussion, Brennan , Hellenistic Astrology, 525-528.
+
+THE LORD OF FORTUNE 993
+Table 77. The Seven Hermetic Lots things, weakness, banishment, de­ struction, sorrow, quality of death
+PLANET LOT GREEK MEANING
+Moon Lot of Fortune Tuchè Fortune, chance, luck; body, posses­ sions, what one does through the course of life; reputation, privilege
+Sun Lot of Spirit Daimön Soul (psuchê)y temper, practical or moral intelligence (phronèsis), exercise of power; cooperates in indications of what one does
+Venus Lot of Eros Eros Love, desire, passion, appetites, friendship, favor
+Mercury Lot of Necessity Anankê Force of compulsion, constraints, obligations; conflicts and enmities
+Mars Lot of Courage Tolma Courage, boldness, treachery, strength, evil-doing
+Jupiter Lot of Victory Nike Faith, good hope, contests, generos ­ ity, success
+Saturn Lot of Nemesis Nemesis Spirits of the underworld, concealed
+
+Tabic /S. Formulas for Calculating the Seven Hermetic Lots
+DAY FORMULA NIGHT FORMULAPLANET LOT
+Moon Lot of Fortune Sun-xMoon, project from asc
+Moon-xSun, project from asc
+Suh Lot of Spirit Moon-xSun, project from asc
+Sun-xMoon, project from asc
+Venus Lot of Eros Spirit—> Venus, project from asc
+Venus-xSpirit, project from asc
+Mercury Lot of Necessity Mercury-* Fortune, project from asc
+Fortune-xMercury, project from asc
+Mars Lot of Courage Mars-xFortune, project from asc
+Fortune-xMars, project from asc
+Jupiter Lot of Victory Spirit—>Jupiter, project from asc
+Jupiter-xSpirit, project from asc
+Saturn Lot of Nemesis Saturn-xFortune, project from asc
+Fortunc-x Saturn, project from asc
+Each of the twelve houses also has its own set of Lots that distinguish be­ tween the various significations of each house topic. Abu Mashar, who had the most comprehensive list, knew of eighty Lots related to the houses. According to Hermes and some of the ancients, for example, the range of sixth-house top­ ics could be more precisely judged by the location of the Lot of Illness, Defects, and Chronic Disease (Saturn-xMars), the Lot of Short-Term Illnesses (Mercury->Mars), the Lot of Slaves (Mercury-xMoon), and the Lot of Captives (lord of the house of the Sun-xSun; lord of the house of the Moon-xMoon).
+There are also Lots whose indications do not relate to any of the twelve hous­ es. In some cases, there were duplicate Lots for certain matters. While they had the same name, they involved different planets. Dorotheus looked to Saturn and
+Venus for the Lot of Marriage, while Valens combined the indications of Venus and the Sun for men and Mars and the Moon for women. Another variant that
+
+THE LORD OF FORTUNE 995
+Valens gave involved Venus and Jupiter for the Lot of Desire or of sexual happi­ ness in marriage.
+During the era of Arabic astrology, new Lots were created to encompass a long list of commercial commodities. These reflected the needs of clients seek­ ing advice on the growth, sale, and trade of goods that contributed to wealth.
+The texts give calculations for such things as the Lot of Lentils, the Lot of Honey, and the Lot of Silk.6 However, despite the later proliferation of Lots, the fore­ most Lot remained that of Fortune, under the auspices of the Moon.
+6 Bonatti , Book of Astronomy 8.2.18.
+7 M anilius , Astronomica 4.14-15.
+CULTURAL CONTEXT OF THE LOT OF FORTUNE
+Lot comes from the Greek word kleros, and originally referred to the art of kleromancy —divination by the casting or drawing of lots, stones, or straws. During the Hellenistic period in Egypt, titles and deeds to land were awarded to Greek citizens by means of drawing lots, and so it came to have a secondary meaning of legacies and inheritances. In the fledging Greek democracy, political officers were determined by the drawing of lots. Today, we have lotteries by which cer­ tain people are chosen from the many for various purposes, such as admission to a school, or winning the jackpot. On one hand, winning the lottery seems to be a matter of random chance and good luck, but the divinatory aspect of this procedure is based upon the notion that a spiritual agency stands behind the outcome, revealing the will of the divine.
+The Hellenistic era has been described as an age of anxiety characterized by the often-opposing forces of fortune and fate. Astrology was developed under the umbrella of Stoic philosophy where “fate rules the world and all things stand fixed by its immutable laws”.7 The Greek word for fate is nioira, which is also a technical term in astrology for each single degree of the zodiacal circle that sur ­ rounds and binds the native. Moira is also the name for the goddess of fate who doles out a persons allotment in life, one that cannot be contested or changed.
+At the same time, the culture acknowledged the role of chance, which was personified by the Greeks as the capricious goddess Tuche and by the Romans as Fortuna. This goddess could raise men and women up and strike them down for no discernible reason. In a passage describing Fortune (before proceeding to Fate), Manilius says:
+
+It happens that virtue fares ill, and guilt fares well; poorly conceived plans arc rewarded, whilst foresight fails; nor does Fortune examine the merits of a case and attend to the deserving, but moves capricious­ ly through the lives of all without distinction.8 8 M anilius , 4.94-97· 9 See chapter 33, pp. 361-67.
+To appease her uncontrollable and unpredictable behavior, Tuche-Fortuna was widely worshiped in the Hellenistic world as the local guardian of the city’s luck. She is often depicted holding a cornucopia (horn of plenty) or the child
+Plutus (wealth) in the hope that she will bless and protect the locality. She is also shown with wings, a rudder, a ball, and is sometimes shown striding upon the prow of a ship. The image of the Wheel of Fortune descended from the goddess
+Tuche-Fortuna. Its derivative was the roulette wheel that immediately granted or removed fortune.
+The innovation of the Lot of Fortune occurred within the predominant Hel­ lenistic belief that the world was governed by fate as decreed by the planetary divinities; simultaneously, however, the possibility was also acknowledged that chance could alter the web of fate by means of seemingly random circumstances.
+Despite these simultaneous beliefs, some ambiguities remain in the Hellenistic astrological texts. To what extent fortune, as indicated by the Lot, was accidental, or whether it simply indicated the amount of material prosperity that a native could expect, is not altogether clear.
+Nevertheless, Hellenistic astrologers attempted to quantify this element of chance—the odds of accidental good or bad fortune that could befall an individ­ ual in a world that was primarily dominated by fate. In the contemporary world, we might ask what the odds are that Lady Fortuna might smile upon someone who wins the lottery and suddenly escapes the materially limiting circumstanc­ es of their life. Hellenistic astrologers thought that even this kind of lucky break was predetermined in the nativity, and they designated it by the Lot of Fortune.
+THE GIVER OF FORTUNE AND PROSPERITY
+As we saw in volume one, the Lot of Fortune is the special Lot of the Moon. 9 Its counterpart is the Lot of Spirit, the special Lot of the Sun. Together they form the two most important Lots, and give us further insight into the interaction between the body (Moon) and the soul (Sun). Both Lots are derived from the zodiacal degrees of the Sun, Moon, and Ascendant, which are the three most
+
+THE LORD OF FORTUNE 997 important factors in the chart. The calculation of Fortune begins from the Moon to the Sun in nocturnal charts (as the Moon is the preeminent luminary by night), and from the Sun to the Moon in diurnal charts (as the Sun is the pre­ dominant light by day). The calculations for the Lot of Spirit are the reverse of these (see Table 78).
+The Lot of Fortune is the degree in the nativity that connects the soul (sym­ bolized by the Sun), the lunar life force (associated with the Moon), and the physical body (represented by the Ascendant). The overarching emphasis of the
+Lot of Fortune, however, is on the body, or, more specifically, on how the living soul fares in the body as the person inhabits the physical world of incarnation.
+The Lot of Fortune also indicates the relative quantity of a persons good fortune in receiving wealth and prosperity. This material bounty enhances a persons physical well-being and general happiness. By contrast, the Lot of Spirit places the emphasis on the soul, its sense of purpose, and its intentional actions in the world. The Lot of Spirit can be used to reveal vocational and professional mat­ ters and their timing. Our focus in this chapter is upon the lord of Fortune as one of the rulers of the nativity.
+Robert Schmidt suggested that the Lot of Fortune functions as an imper­ sonal agency that represents the external and accidental circumstances that befall an individual, i.e., circumstances that are beyond a persons control rath­ er than the result of intentional actions, efforts, or merit.10 11 12 However, the texts themselves do not imply that the indications of the Lot of Fortune are a matter of accidental good luck. The only hint of this kind of thinking comes from a commentary on Paulus’ Introduction written by Olympiodorus several hundred years later. In speaking about the Lots of Fortune and Spirit, he writes:
+10 Sen m i dt, Kepler College Sourcebook of Hellenistic Astrological Texts, 122.
+11 Olympiodorus , Commentary on Paulus Alexandrmus 22, trans. Greenbau .m .
+12 Firmicus , Mathcsis 4.45· the greatest power of divination abides with knowing the character­ istics of the soul and instruction about the body; that is to say, how a soul, having come from above, is here a citizen according to the cosmos, and how the body [is situated] and things concerning the body. And to say, simply, all the things it will encounter not depend­ ing upon us. ”
+Because the body is the domain of the Moon, the ancient authors called the house that contained the Lot of Fortune the “House of the Moon? 2 The Moon
+
+998 CHAPTER 88 with its changing phases was seen to regulate the forces of increase and decrease, and thus the shifting tides of material fortune.
+Dorotheus used the Lot of Fortune to judge the “condition of the wealthy, those in the middle, and the poor’?3 Firmicus Maternus wrote that it was an indicator of the quality of life, the amount of personal wealth, and the course of good or bad fortune.’4 Valens added reputation to this list of attributes, while
+Ptolemy clearly stated that the Lot of Fortune signified a persons material acqui­ sitions.’5 Paulus taught that Fortune signifies all things about the body and the actions of the native, and that it was indicative of acquisition, reputation, and privilege.’6 Rhetorius related that the Lot of the Moon or of Fortune signified all things in the body, the actions and praises arising from ones way of life, the sicknesses of mind, and companionships.*7 13 Carmen 1.28.10.
+14 Mathesis 4-4-5· 15 V alens , Anthology 2.2; PtoleiMY, Tetrabiblos 4.2.
+16 Introduction 23.
+17 Compendium 47.
+18 Great Introduction 8.3.
+19 Book of Astronomy 9: On the Second House.
+20 Rudhyar , The Lunation Cycle.
+The Arabic astrologer Abu Mashar attributed prosperity, enrichment, rich­ es, honor, and lack of honor to this Lot.’8 Bonatti, in a discussion about sec­ ond-house assessment and the acquisition of prosperity and substance, wrote that the Lot of Fortune signifies the natives substance, prosperity, status, and indeed his whole condition.’9 In modern astrology, the Lot of Fortune is used as an index of happiness where the life energies can flow with the greatest amount of ease because it is the “meeting point” of the Sun, Moon, and Ascendant.13 14 15 16 17 18 19 20
+ANALYZING FORTUNE
+The Lot of Fortune was analyzed according to the nature of its zodiacal sign, the angular strength and favorability of its house location, and whether it was witnessed by benefic or malefic planets. Because a Lot is a mathematically de­ rived point rather than a celestial body, there is some question as to whether it becomes debilitated when under the Suns beams.
+The Lot was considered to be in good condition when it was located in a favorable house or an angular house, witnessed by the benefic planets, and in a zodiacal sign that was ruled by a benefic planet or a planet in its own sign of rulership (domicile, exaltation, triplicity, bound). Under these circumstances, a
+
+THE LORD OF FORTUNE 999 person ’s life was well-supported by the world for accumulating prosperity and the ease of daily life.
+Conversely, the Lot of Fortune was considered to be in poor condition when it was located in an unfavorable or cadent house, witnessed by the malefic plan­ ets (especially by co-presence, square, or opposition, and more so if located in their sign of detriment or fall, or in a zodiacal sign whose ruler was in bad con­ dition or a bad house), and arguably, if it was under the beams of the Sun. The
+Dorotheus text is unclear as to whether it is the Lot or the lord of the Lot, or perhaps even both, that were weakened when under the Suns beams. It can be argued that because the Lots are points in the zodiac rather than planets, loca­ tion under the beams is not applicable. A poorly placed Lot of Fortune did not necessarily indicate poverty and wretchedness, but the individual might have to work harder, have limited means of achieving prosperity, have a more difficult time engaging with the physical world, or experience less support from it.
+Because of its intimate connection with the Moon and hence the body, For­ tune and its lord (as well as the Lot of Spirit and its lord) were considered in medical diagnosis.21 Injuries, physical afflictions, and ailments were more active when the malefic planets were present or witnessing the place of Fortune or its lord, in accordance with the parts of the body associated with the zodiacal sign of Fortune or its lord. Lack of injuries in the body parts were indicated when the zodiacal places of the Lot of Fortune and its lord were well-situated and unafflicted.
+21 V alens , Anthology 2.37.
+FORTUNE HOUSES
+The Lot of Fortune was considered so important that it was used to generate an entirely new set of houses called Fortune houses. The house and zodiacal sign containing Fortune became the first house and was invested with a potency and dynamic strength equal in power to the first house as defined by the Ascendant.
+Each of the other houses along with their meanings proceeded from that of
+Fortune. The tenth house or sign from Fortune pointed to professional or social endeavors that lead to prosperity. The eleventh house from Fortune was called the House of Acquisitions and the presence of the benefics portended the accu­ mulation of wealth; the eighth house from Fortune contained insight concern­ ing the persons manner of death.
+
+Fortune houses were also used in a timing procedure called zodiacal releas­ ing from the Lots of Fortune and Spirit. When the time-lord period arrived at the house containing the Lot of Fortune, or to a house that was angular to it, the outcomes of that period of time were said to be more dramatic and eventful. The tenth house from Fortune was an especially significant time in the peak of ones power in relation to prosperity. Periods of lesser intensity or activity were indi­ cated when the releasing comes to the houses that are non-angular in relation to the house that contains Fortune.
+For those individuals whose natal Lot of Fortune falls in a cadent house, it is that very cadent house that establishes the sequence of angular houses in the
+Fortune houses wheel. Thus, when the releasing moves into any of the natal cadent houses, those times are potentially the most active for that person. One might speculate whether the most active times for individuals born with For­ tune in a cadent natal house are quantitatively less active than for those born with Fortune in an angular natal house. In a general sense, the presence of the
+Lot of Fortune, Lot of Spirit, Lot of Eros, or Lot of Necessity in any house, even if it is a natally cadent house, was thought to make that house more energetic, active, and operative.22 22 V alens , Anthology 4.11.
+23 Lilly, Christian Astrology, chapter 171.

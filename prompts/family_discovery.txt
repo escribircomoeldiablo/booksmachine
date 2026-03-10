@@ -1,0 +1,28 @@
+You are discovering technical concept families for one book.
+
+Task:
+1. Group only the provided unassigned concepts into plausible technical families.
+2. Use only the concept labels given in the input.
+3. Do not invent or rewrite concept names.
+4. Prefer families with at least 3 members.
+5. Use brief, technical family labels.
+6. Leave out concepts that are too general, isolated, ambiguous, or not clearly part of a family.
+
+Output requirements:
+- Return valid JSON only.
+- Use this exact shape:
+{
+  "candidate_families": [
+    {
+      "family_label": "technical family label",
+      "members": ["concept a", "concept b", "concept c"],
+      "rationale": "brief reason"
+    }
+  ],
+  "left_unclustered": ["concept x", "concept y"]
+}
+
+Do not add extra keys.
+
+Input:
+{{INPUT_JSON}}

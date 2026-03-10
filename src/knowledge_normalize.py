@@ -5,7 +5,14 @@ from __future__ import annotations
 import re
 
 from .concept_normalization import normalize_concepts
-from .knowledge_schema import ChunkKnowledgeV1
+from .knowledge_schema import (
+    AuthorVariant,
+    ChunkKnowledgeV1,
+    DecisionRule,
+    ProcedureCondition,
+    ProcedureOutput,
+    ProcedureStep,
+)
 
 CORE_FIELDS: tuple[str, ...] = (
     "concepts",
@@ -24,6 +31,14 @@ SEMANTIC_FIELDS: tuple[str, ...] = (
     "examples",
     "ambiguities",
 )
+AUTHOR_CANONICAL_MAP = {
+    "valens": "Valens",
+    "porphyry": "Porphyry",
+    "paulus": "Paulus",
+    "dorotheus": "Dorotheus",
+    "ptolemy": "Ptolemy",
+    "antiochus": "Antiochus",
+}
 
 _RE_EDITORIAL = re.compile(
     r"\b(copyright|all rights reserved|permission|reproduc|license|isbn|publisher|quoted|citation style)\b",
@@ -41,6 +56,15 @@ _RE_OPERATIONAL_DEFINITION = re.compile(
     r"\b(if|when|si|cuando|then|therefore|indicates|indica|applies|aplica|depends|depende|strength|fuerza|weak|debil|manifest|manifiesta|effect|efecto)\b",
     re.IGNORECASE,
 )
+_RE_DECISION_RULE = re.compile(
+    r"^(?:if|si)\s+(?P<condition>.+?)(?:,\s*)?(?:then|entonces)\s+(?P<outcome>.+)$",
+    re.IGNORECASE,
+)
+_RE_LINEAR_PROCEDURE_LEAD = re.compile(
+    r"^(?:to use|to calculate|to determine|to assign|profections?\s*:|assigning\s+the|using\s+the)\s+",
+    re.IGNORECASE,
+)
+_RE_LINEAR_PROCEDURE_SPLIT = re.compile(r";|\.\s+|,\s+(?=(?:and\s+)?(?:identify|determine|interpret|activate|assign|emphasize|advance|move|evaluate|apply)\b)", re.IGNORECASE)
 
 
 def _normalize_string(value: str) -> str:
@@ -62,11 +86,244 @@ def _dedupe_conservative(items: list[str]) -> list[str]:
     return result
 
 
+def _normalize_procedure_text(value: str) -> str:
+    normalized = _normalize_string(value)
+    normalized = re.sub(r"^(?:step|paso)\s*\d+[:.)-]?\s*", "", normalized, flags=re.IGNORECASE)
+    normalized = re.sub(r"^\d+[:.)-]?\s*", "", normalized)
+    return normalized.strip(" .;:")
+
+
+def _canonical_author_name(value: str) -> str:
+    normalized = _normalize_string(value).strip(" .;:")
+    if not normalized:
+        return ""
+    key = normalized.lower()
+    return AUTHOR_CANONICAL_MAP.get(key, normalized.title() if key.islower() else normalized)
+
+
+def _step_id(order: int, text: str) -> str:
+    normalized = re.sub(r"[^a-z0-9]+", "-", _normalize_procedure_text(text).lower()).strip("-")
+    suffix = normalized[:48] or "step"
+    return f"step-{order:03d}-{suffix}"
+
+
+def _dedupe_steps(steps: list[ProcedureStep]) -> list[ProcedureStep]:
+    seen: set[tuple[int, str]] = set()
+    output: list[ProcedureStep] = []
+    for step in sorted(steps, key=lambda item: (item.order, item.id, item.text)):
+        normalized_text = _normalize_procedure_text(step.text)
+        if not normalized_text:
+            continue
+        key = (step.order, normalized_text.lower())
+        if key in seen:
+            continue
+        seen.add(key)
+        output.append(
+            ProcedureStep(
+                id=step.id.strip() or _step_id(step.order, normalized_text),
+                order=step.order,
+                text=normalized_text,
+            )
+        )
+    return output
+
+
+def _dedupe_rules(rules: list[DecisionRule]) -> list[DecisionRule]:
+    seen: set[tuple[str, str, tuple[str, ...]]] = set()
+    output: list[DecisionRule] = []
+    for rule in rules:
+        condition = _normalize_string(rule.condition)
+        outcome = _normalize_string(rule.outcome)
+        related = tuple(dict.fromkeys(step for step in rule.related_steps if step))
+        key = (condition.lower(), outcome.lower(), related)
+        if not condition or not outcome or key in seen:
+            continue
+        seen.add(key)
+        output.append(DecisionRule(condition=condition, outcome=outcome, related_steps=list(related)))
+    return output
+
+
+def _derive_decision_rules_from_technical_rules(record: ChunkKnowledgeV1) -> None:
+    derived: list[DecisionRule] = []
+    remaining_rules: list[str] = []
+    for item in record.technical_rules:
+        text = _normalize_string(item)
+        match = _RE_DECISION_RULE.match(text)
+        if match:
+            derived.append(
+                DecisionRule(
+                    condition=_normalize_string(match.group("condition")),
+                    outcome=_normalize_string(match.group("outcome")).rstrip("."),
+                    related_steps=[],
+                )
+            )
+            continue
+        lowered = text.lower()
+        if lowered.startswith("if ") or lowered.startswith("si "):
+            if "," in text:
+                condition, outcome = text.split(",", 1)
+                outcome_text = outcome.strip().lstrip("then ").lstrip("entonces ").strip()
+                if outcome_text:
+                    derived.append(
+                        DecisionRule(
+                            condition=_normalize_string(re.sub(r"^(if|si)\s+", "", condition, flags=re.IGNORECASE)),
+                            outcome=_normalize_string(outcome_text).rstrip("."),
+                            related_steps=[],
+                        )
+                    )
+                    continue
+        remaining_rules.append(item)
+    if derived:
+        record.decision_rules = _dedupe_rules(list(record.decision_rules) + derived)
+        record.technical_rules = remaining_rules
+
+
+def _candidate_step_segments(text: str) -> list[str]:
+    normalized = _normalize_string(text).rstrip(".")
+    normalized = re.sub(r"^(?:to use|to calculate|to determine|to assign)\s+[^:]+:\s*", "", normalized, flags=re.IGNORECASE)
+    normalized = re.sub(r"^(?:profections?|progressions?|primary directions?)\s*:\s*", "", normalized, flags=re.IGNORECASE)
+    parts = [_normalize_procedure_text(part) for part in _RE_LINEAR_PROCEDURE_SPLIT.split(normalized)]
+    parts = [re.sub(r"^and\s+", "", part, flags=re.IGNORECASE) for part in parts]
+    parts = [part for part in parts if part]
+    return parts
+
+
+def _looks_like_linear_procedure(text: str) -> bool:
+    normalized = _normalize_string(text)
+    if not normalized:
+        return False
+    if _RE_LINEAR_PROCEDURE_LEAD.search(normalized):
+        return True
+    lowered = normalized.lower()
+    return (
+        "identify the time lord" in lowered
+        or "interpret the matters" in lowered
+        or "activate each zodiac" in lowered
+        or "profected sign" in lowered
+    )
+
+
+def _promote_linear_procedures_to_steps(record: ChunkKnowledgeV1) -> None:
+    if record.procedure_steps:
+        return
+
+    promoted_steps: list[ProcedureStep] = []
+    for source_text in list(record.procedures) + list(record.technical_rules):
+        text = _normalize_string(source_text)
+        if not _looks_like_linear_procedure(text):
+            continue
+        segments = _candidate_step_segments(text)
+        action_segments = []
+        for segment in segments:
+            lowered = segment.lower()
+            if any(
+                lowered.startswith(prefix)
+                for prefix in (
+                    "activate ",
+                    "identify ",
+                    "determine ",
+                    "interpret ",
+                    "assign ",
+                    "emphasize ",
+                    "move ",
+                    "advance ",
+                    "evaluate ",
+                    "apply ",
+                )
+            ):
+                action_segments.append(segment)
+        if len(action_segments) < 2:
+            continue
+        for order, segment in enumerate(action_segments, start=len(promoted_steps) + 1):
+            promoted_steps.append(
+                ProcedureStep(
+                    id=_step_id(order, segment),
+                    order=order,
+                    text=segment,
+                )
+            )
+
+    if promoted_steps:
+        record.procedure_steps = _dedupe_steps(list(record.procedure_steps) + promoted_steps)
+
+
+def _dedupe_conditions(values: list[ProcedureCondition]) -> list[ProcedureCondition]:
+    seen: set[tuple[str, str, tuple[str, ...]]] = set()
+    output: list[ProcedureCondition] = []
+    for item in values:
+        text = _normalize_string(item.text)
+        scope = _normalize_string(item.scope)
+        related = tuple(dict.fromkeys(step for step in item.related_steps if step))
+        key = (text.lower(), scope.lower(), related)
+        if not text or key in seen:
+            continue
+        seen.add(key)
+        output.append(ProcedureCondition(text=text, scope=scope, related_steps=list(related)))
+    return output
+
+
+def _dedupe_variants(values: list[AuthorVariant]) -> list[AuthorVariant]:
+    seen: set[tuple[str, str, str, tuple[str, ...]]] = set()
+    output: list[AuthorVariant] = []
+    for item in values:
+        author = _canonical_author_name(item.author)
+        kind = _normalize_string(item.kind).lower()
+        text = _normalize_string(item.text)
+        related = tuple(dict.fromkeys(step for step in item.related_steps if step))
+        key = (author.lower(), kind, text.lower(), related)
+        if not author or not kind or not text or key in seen:
+            continue
+        seen.add(key)
+        output.append(AuthorVariant(author=author, kind=kind, text=text, related_steps=list(related)))
+    return output
+
+
+def _dedupe_outputs(values: list[ProcedureOutput]) -> list[ProcedureOutput]:
+    seen: set[str] = set()
+    output: list[ProcedureOutput] = []
+    for item in values:
+        text = _normalize_string(item.text)
+        key = text.lower()
+        if not text or key in seen:
+            continue
+        seen.add(key)
+        output.append(ProcedureOutput(text=text))
+    return output
+
+
+def derive_procedures(record: ChunkKnowledgeV1) -> list[str]:
+    derived: list[str] = []
+    for step in sorted(record.procedure_steps, key=lambda item: (item.order, item.id)):
+        derived.append(f"{step.order}. {step.text}")
+    for rule in record.decision_rules:
+        derived.append(f"If {rule.condition}, then {rule.outcome}.")
+    for item in record.preconditions:
+        scope = f" ({item.scope})" if item.scope else ""
+        derived.append(f"Precondition{scope}: {item.text}")
+    for item in record.exceptions:
+        scope = f" ({item.scope})" if item.scope else ""
+        derived.append(f"Exception{scope}: {item.text}")
+    for item in record.author_variants:
+        derived.append(f"{item.author} [{item.kind}]: {item.text}")
+    for item in record.procedure_outputs:
+        derived.append(f"Output: {item.text}")
+    return _dedupe_conservative(derived)
+
+
 def normalize_chunk_knowledge(record: ChunkKnowledgeV1) -> ChunkKnowledgeV1:
     """Normalize selected fields while preserving core metadata."""
     record.terminology = _dedupe_conservative(record.terminology)
     record.concepts = _dedupe_conservative(record.concepts)
     record.technical_rules = _dedupe_conservative(record.technical_rules)
+    _derive_decision_rules_from_technical_rules(record)
+    _promote_linear_procedures_to_steps(record)
+    record.procedure_steps = _dedupe_steps(record.procedure_steps)
+    record.decision_rules = _dedupe_rules(record.decision_rules)
+    record.preconditions = _dedupe_conditions(record.preconditions)
+    record.exceptions = _dedupe_conditions(record.exceptions)
+    record.author_variants = _dedupe_variants(record.author_variants)
+    record.procedure_outputs = _dedupe_outputs(record.procedure_outputs)
+    record.procedures = derive_procedures(record)
     return record
 
 

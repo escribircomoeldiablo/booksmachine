@@ -65,6 +65,7 @@ from .knowledge_precheck import (
     precheck_chunk_extractability,
 )
 from .knowledge_schema import ChunkKnowledgeV1, SectionRef, make_empty_chunk_knowledge
+from .knowledge_schema import AuthorVariant, DecisionRule, ProcedureCondition, ProcedureOutput, ProcedureStep
 from .loader import load_book, load_book_with_structure
 from .structure_pass import (
     build_document_map,
@@ -205,6 +206,108 @@ def _load_checkpointed_knowledge(
                     return [item.strip() for item in value if isinstance(item, str) and item.strip()]
                 return []
 
+            def _steps() -> list[ProcedureStep]:
+                value = payload.get("procedure_steps", [])
+                output: list[ProcedureStep] = []
+                if not isinstance(value, list):
+                    return output
+                for item in value:
+                    if not isinstance(item, dict):
+                        continue
+                    step_id = item.get("id", "")
+                    order = item.get("order")
+                    text = item.get("text")
+                    if isinstance(step_id, str) and isinstance(order, int) and isinstance(text, str) and text.strip():
+                        output.append(ProcedureStep(id=step_id.strip(), order=order, text=text.strip()))
+                return output
+
+            def _rules() -> list[DecisionRule]:
+                value = payload.get("decision_rules", [])
+                output: list[DecisionRule] = []
+                if not isinstance(value, list):
+                    return output
+                for item in value:
+                    if not isinstance(item, dict):
+                        continue
+                    condition = item.get("condition")
+                    outcome = item.get("outcome")
+                    related_steps = item.get("related_steps", [])
+                    if (
+                        isinstance(condition, str)
+                        and isinstance(outcome, str)
+                        and isinstance(related_steps, list)
+                    ):
+                        output.append(
+                            DecisionRule(
+                                condition=condition.strip(),
+                                outcome=outcome.strip(),
+                                related_steps=[v.strip() for v in related_steps if isinstance(v, str) and v.strip()],
+                            )
+                        )
+                return output
+
+            def _conditions(key: str) -> list[ProcedureCondition]:
+                value = payload.get(key, [])
+                output: list[ProcedureCondition] = []
+                if not isinstance(value, list):
+                    return output
+                for item in value:
+                    if not isinstance(item, dict):
+                        continue
+                    text = item.get("text")
+                    scope = item.get("scope", "")
+                    related_steps = item.get("related_steps", [])
+                    if isinstance(text, str) and isinstance(scope, str) and isinstance(related_steps, list):
+                        output.append(
+                            ProcedureCondition(
+                                text=text.strip(),
+                                scope=scope.strip(),
+                                related_steps=[v.strip() for v in related_steps if isinstance(v, str) and v.strip()],
+                            )
+                        )
+                return output
+
+            def _variants() -> list[AuthorVariant]:
+                value = payload.get("author_variants", [])
+                output: list[AuthorVariant] = []
+                if not isinstance(value, list):
+                    return output
+                for item in value:
+                    if not isinstance(item, dict):
+                        continue
+                    author = item.get("author")
+                    kind = item.get("kind")
+                    text = item.get("text")
+                    related_steps = item.get("related_steps", [])
+                    if (
+                        isinstance(author, str)
+                        and isinstance(kind, str)
+                        and isinstance(text, str)
+                        and isinstance(related_steps, list)
+                    ):
+                        output.append(
+                            AuthorVariant(
+                                author=author.strip(),
+                                kind=kind.strip(),
+                                text=text.strip(),
+                                related_steps=[v.strip() for v in related_steps if isinstance(v, str) and v.strip()],
+                            )
+                        )
+                return output
+
+            def _outputs() -> list[ProcedureOutput]:
+                value = payload.get("procedure_outputs", [])
+                output: list[ProcedureOutput] = []
+                if not isinstance(value, list):
+                    return output
+                for item in value:
+                    if not isinstance(item, dict):
+                        continue
+                    text = item.get("text")
+                    if isinstance(text, str) and text.strip():
+                        output.append(ProcedureOutput(text=text.strip()))
+                return output
+
             schema_version = payload.get("schema_version")
             chunk_id = payload.get("chunk_id")
             source_fingerprint = payload.get("source_fingerprint")
@@ -227,6 +330,12 @@ def _load_checkpointed_knowledge(
                 relationships=_list("relationships"),
                 examples=_list("examples"),
                 ambiguities=_list("ambiguities"),
+                procedure_steps=_steps(),
+                decision_rules=_rules(),
+                preconditions=_conditions("preconditions"),
+                exceptions=_conditions("exceptions"),
+                author_variants=_variants(),
+                procedure_outputs=_outputs(),
             )
         except (json.JSONDecodeError, OSError):
             continue
@@ -248,11 +357,16 @@ def _chunking_fingerprint(
     target_size: int,
     min_size: int,
     split_window: int,
+    output_language: str,
+    knowledge_language: str,
 ) -> str:
     if mode == "structural":
-        token = f"structural:{target_size}:{min_size}:{split_window}"
+        token = (
+            f"structural:{target_size}:{min_size}:{split_window}:"
+            f"output={output_language}:knowledge={knowledge_language}"
+        )
     else:
-        token = f"legacy:{chunk_size}:{overlap}"
+        token = f"legacy:{chunk_size}:{overlap}:output={output_language}:knowledge={knowledge_language}"
     return _sha256_text(token)
 
 
@@ -465,7 +579,13 @@ def _all_fields_empty(record: ChunkKnowledgeV1) -> bool:
 
 
 def _has_core_doctrinal_content(record: ChunkKnowledgeV1) -> bool:
-    return bool(record.definitions or record.technical_rules or record.procedures)
+    return bool(
+        record.definitions
+        or record.technical_rules
+        or record.procedures
+        or record.procedure_steps
+        or record.decision_rules
+    )
 
 
 def _is_concept_heavy_doctrine_light(record: ChunkKnowledgeV1) -> bool:
@@ -513,7 +633,7 @@ def _is_terminology_dominant(record: ChunkKnowledgeV1) -> bool:
     terminology_count = len(record.terminology)
     if terminology_count < max(0, KNOWLEDGE_TERMINOLOGY_DOMINANT_MIN_TERMS):
         return False
-    if record.technical_rules or record.procedures:
+    if record.technical_rules or record.procedures or record.procedure_steps or record.decision_rules:
         return False
     non_glossarial = _count_non_glossarial_definitions(record.definitions)
     if non_glossarial > 0:
@@ -525,7 +645,7 @@ def _is_terminology_dominant(record: ChunkKnowledgeV1) -> bool:
 
 
 def _doctrinal_support_level(record: ChunkKnowledgeV1) -> str:
-    if record.technical_rules or record.procedures:
+    if record.technical_rules or record.procedures or record.procedure_steps or record.decision_rules:
         return "strong"
     non_glossarial = _count_non_glossarial_definitions(record.definitions)
     if non_glossarial >= max(1, KNOWLEDGE_MIN_NON_GLOSSARIAL_DEFINITIONS_FOR_EXTRACT) and record.concepts:
@@ -539,7 +659,7 @@ def _semantic_payload_near_empty(record: ChunkKnowledgeV1) -> bool:
         return True
     if semantic_items > max(0, KNOWLEDGE_NEAR_EMPTY_MAX_SEMANTIC_ITEMS):
         return False
-    if record.technical_rules or record.procedures:
+    if record.technical_rules or record.procedures or record.procedure_steps or record.decision_rules:
         return False
     if _count_non_glossarial_definitions(record.definitions) > 0:
         return False
@@ -678,6 +798,8 @@ def process_book(
     verbose: bool = False,
     resume: bool = True,
     output_language: str = "es",
+    knowledge_language: str = "original",
+    output_folder: str | None = None,
     progress_callback: ProgressCallback | None = None,
 ) -> str:
     """Process a book file and save an aggregated technical summary."""
@@ -687,8 +809,11 @@ def process_book(
         raise ValueError("max_chunks must be greater than 0 when provided")
     if output_language not in {"es", "original"}:
         raise ValueError("output_language must be either 'es' or 'original'")
+    if knowledge_language not in {"es", "original"}:
+        raise ValueError("knowledge_language must be either 'es' or 'original'")
 
     source_path = Path(path)
+    effective_output_folder = output_folder or OUTPUT_FOLDER
     _emit_progress(progress_callback, "loading", f"Cargando documento: {source_path.name}")
     structure_enabled = STRUCTURE_PASS_ENABLED
     if structure_enabled:
@@ -697,7 +822,7 @@ def process_book(
         text = load_book(str(source_path))
         page_units = None
     book_hash = _sha256_text(text)
-    document_map_path = build_document_map_output_path(str(source_path), OUTPUT_FOLDER)
+    document_map_path = build_document_map_output_path(str(source_path), effective_output_folder)
     structure_map: dict[str, object] | None = None
     structure_quality: dict[str, object] | None = None
     structure_quality_passed: bool | None = None
@@ -822,11 +947,11 @@ def process_book(
     if fallback_reason is not None:
         _log(verbose, f"Fallback to legacy chunking: {fallback_reason}")
 
-    output_path = build_output_path(str(source_path), OUTPUT_FOLDER)
-    chunk_output_path = build_chunk_output_path(str(source_path), OUTPUT_FOLDER)
-    block_output_path = build_block_output_path(str(source_path), OUTPUT_FOLDER)
-    knowledge_output_path = build_knowledge_chunks_output_path(str(source_path), OUTPUT_FOLDER)
-    knowledge_audit_output_path = build_knowledge_audit_output_path(str(source_path), OUTPUT_FOLDER)
+    output_path = build_output_path(str(source_path), effective_output_folder)
+    chunk_output_path = build_chunk_output_path(str(source_path), effective_output_folder)
+    block_output_path = build_block_output_path(str(source_path), effective_output_folder)
+    knowledge_output_path = build_knowledge_chunks_output_path(str(source_path), effective_output_folder)
+    knowledge_audit_output_path = build_knowledge_audit_output_path(str(source_path), effective_output_folder)
     total_chunks_detected = len(chunks)
     chunking_hash = _chunking_fingerprint(
         mode=chunking_mode,
@@ -835,12 +960,14 @@ def process_book(
         target_size=chunking_target_size,
         min_size=chunking_min_size,
         split_window=chunking_split_window,
+        output_language=output_language,
+        knowledge_language=knowledge_language,
     )
     checkpoint_namespace = (
         CHECKPOINT_NAMESPACE_KNOWLEDGE if KNOWLEDGE_EXTRACTION_ENABLED else CHECKPOINT_NAMESPACE_SUMMARY
     )
     checkpoint_root = _checkpoint_root(
-        OUTPUT_FOLDER,
+        effective_output_folder,
         book_hash,
         checkpoint_namespace,
         chunking_hash,
@@ -879,6 +1006,8 @@ def process_book(
     _log(verbose, f"Processing mode: {processing_mode}")
     _log(verbose, f"Dry run: {dry_run}")
     _log(verbose, f"Resume enabled: {resume}")
+    _log(verbose, f"Output language: {output_language}")
+    _log(verbose, f"Knowledge language: {knowledge_language}")
     _log(verbose, f"Total chunks detected: {total_chunks_detected}")
     _log(verbose, f"Chunks to process: {chunks_to_process}")
     _log(verbose, f"LLM calls expected (chunk layer): {chunk_llm_calls_expected}")
@@ -890,7 +1019,7 @@ def process_book(
         "preflight",
         (
             f"Preflight listo: {chunks_to_process} chunks a procesar "
-            f"({chunk_llm_calls_expected} nuevos, idioma={output_language})"
+            f"({chunk_llm_calls_expected} nuevos, salida={output_language}, conocimiento={knowledge_language})"
         ),
         total_chunks_detected=total_chunks_detected,
         chunks_to_process=chunks_to_process,
@@ -1004,6 +1133,7 @@ def process_book(
                     chunk_id=chunk_id,
                     source_fingerprint=book_hash,
                     section_refs=section_refs,
+                    knowledge_language=knowledge_language,
                 )
                 if extraction.used_fallback:
                     knowledge_parse_failures += 1
@@ -1073,6 +1203,8 @@ def process_book(
             {
                 "input_path": str(source_path),
                 "processing_mode": processing_mode,
+                "output_language": output_language,
+                "knowledge_language": knowledge_language,
                 "book_fingerprint": book_hash,
                 "chunking_fingerprint": chunking_hash,
                 "chunk_size": CHUNK_SIZE,
@@ -1466,7 +1598,7 @@ def process_book(
     block_summary_artifact = compile_block_summaries(block_summary_records)
     final_summary = compile_compendium(compendium_summary)
 
-    ensure_dir(OUTPUT_FOLDER)
+    ensure_dir(effective_output_folder)
     _emit_progress(progress_callback, "writing", "Guardando artefactos de salida")
     save_text(chunk_output_path, chunk_summary_artifact)
     save_text(block_output_path, block_summary_artifact)

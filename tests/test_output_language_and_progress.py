@@ -6,10 +6,20 @@ from unittest.mock import patch
 
 from src.pipeline import process_book
 from src.summarizer import build_summary_prompt
+from src.knowledge_extractor import build_chunk_knowledge_prompt
 from src.synthesizer import build_block_prompt, build_compendium_prompt
 
 
 class OutputLanguageAndProgressTests(unittest.TestCase):
+    def test_knowledge_prompt_targets_original_language_by_default(self) -> None:
+        prompt = build_chunk_knowledge_prompt(
+            chunk_text="Latin text",
+            chunk_id="chunk_1",
+            source_fingerprint="hash",
+            section_refs=[],
+        )
+        self.assertIn("idioma original", prompt)
+
     def test_summary_prompt_can_target_original_language(self) -> None:
         prompt = build_summary_prompt("Latin text", output_language="original")
         self.assertIn("idioma original", prompt)
@@ -81,6 +91,48 @@ class OutputLanguageAndProgressTests(unittest.TestCase):
         self.assertIn("synthesis", stages)
         self.assertIn("writing", stages)
         self.assertIn("done", stages)
+
+    def test_pipeline_progress_reports_output_and_knowledge_languages(self) -> None:
+        events: list[tuple[str, str]] = []
+
+        def on_progress(stage: str, message: str, _: dict[str, object]) -> None:
+            events.append((stage, message))
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            with patch("src.pipeline.OUTPUT_FOLDER", tmpdir):
+                with patch("src.pipeline.load_book", return_value="source text"):
+                    with patch("src.pipeline.split_into_chunks", return_value=["c1"]):
+                        with patch("src.pipeline.summarize_chunk", return_value="summary::c1"):
+                            with patch(
+                                "src.pipeline.synthesize_blocks",
+                                return_value=(
+                                    [
+                                        {
+                                            "block_index": 1,
+                                            "chunk_start": 1,
+                                            "chunk_end": 1,
+                                            "chunk_indices": [1],
+                                            "summary_text": "block::1",
+                                        }
+                                    ],
+                                    1,
+                                ),
+                            ):
+                                with patch(
+                                    "src.pipeline.synthesize_compendium",
+                                    return_value=("compendium::global", 0),
+                                ):
+                                    process_book(
+                                        "books/sample_book.txt",
+                                        output_language="es",
+                                        knowledge_language="original",
+                                        progress_callback=on_progress,
+                                        verbose=False,
+                                    )
+
+        preflight_message = next(message for stage, message in events if stage == "preflight")
+        self.assertIn("salida=es", preflight_message)
+        self.assertIn("conocimiento=original", preflight_message)
 
 
 if __name__ == "__main__":

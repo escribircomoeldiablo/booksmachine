@@ -5,6 +5,7 @@ import unittest
 from src.knowledge_normalize import (
     apply_post_extraction_clamp,
     apply_semantic_local_filter,
+    normalize_chunk_knowledge,
     merge_chunk_knowledge_records,
 )
 from src.knowledge_schema import ChunkKnowledgeV1
@@ -149,6 +150,39 @@ class KnowledgeNormalizeClampTests(unittest.TestCase):
         self.assertEqual(concept_index["whole sign house system"], [1, 2])
         self.assertEqual(concept_index["angular house"], [1, 2])
         self.assertEqual(concept_index["succedent house"], [2])
+
+    def test_normalize_chunk_knowledge_promotes_conditional_rules_to_decision_rules(self) -> None:
+        record = _record()
+        record.technical_rules = [
+            "If the sect light is cadent, then the Predomination may pass to the other light.",
+            "General background rule.",
+        ]
+
+        normalized = normalize_chunk_knowledge(record)
+
+        self.assertEqual(
+            [(item.condition, item.outcome) for item in normalized.decision_rules],
+            [("the sect light is cadent", "the Predomination may pass to the other light")],
+        )
+        self.assertEqual(normalized.technical_rules, ["General background rule."])
+
+    def test_normalize_chunk_knowledge_promotes_linear_procedure_to_steps(self) -> None:
+        record = _record()
+        record.procedure_steps = []
+        record.procedures = [
+            "To use profections: activate each zodiacal sign in order at a fixed rate, identify the time lord as the ruler of the profected sign, and interpret the matters of the house occupied by the profected sign during the period."
+        ]
+
+        normalized = normalize_chunk_knowledge(record)
+
+        self.assertEqual(
+            [item.text for item in normalized.procedure_steps],
+            [
+                "activate each zodiacal sign in order at a fixed rate",
+                "identify the time lord as the ruler of the profected sign",
+                "interpret the matters of the house occupied by the profected sign during the period",
+            ],
+        )
 
 
 if __name__ == "__main__":

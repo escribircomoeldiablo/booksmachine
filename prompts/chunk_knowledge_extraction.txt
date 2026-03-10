@@ -7,6 +7,7 @@ No inventes informacion no respaldada por el texto.
 No colapses variantes doctrinales si aparecen como distintas.
 Preserva terminologia tradicional y original cuando corresponda.
 Prioriza literalidad semantica local del fragmento (no parafrasis libre expansiva).
+{language_instruction}
 
 INSTRUCCIONES DE SALIDA (OBLIGATORIAS):
 1) Devuelve UNICAMENTE un objeto JSON valido.
@@ -14,7 +15,9 @@ INSTRUCCIONES DE SALIDA (OBLIGATORIAS):
 3) Todas estas claves deben existir en la raiz:
    schema_version, chunk_id, source_fingerprint, section_refs,
    concepts, definitions, technical_rules, procedures,
-   terminology, relationships, examples, ambiguities.
+   terminology, relationships, examples, ambiguities,
+   procedure_steps, decision_rules, preconditions,
+   exceptions, author_variants, procedure_outputs.
 3.1) definitions DEBE ser array de strings (NO objetos).
 3.2) Si expresas una definicion como termino+descripcion, usa string unico:
      "Termino: definicion".
@@ -27,6 +30,16 @@ INSTRUCCIONES DE SALIDA (OBLIGATORIAS):
 10) Si hay mezcla tradicional/moderna:
     - conserva el nucleo doctrinal tradicional en su campo,
     - desplaza la glosa moderna o tension interpretativa a ambiguities cuando sea separable.
+11) Si el fragmento NO contiene procedimiento real:
+    - deja procedure_steps, decision_rules, preconditions,
+      exceptions, author_variants y procedure_outputs como arrays vacios.
+    - no inventes estructura procedural.
+12) Si el fragmento mezcla contenido conceptual y procedural:
+    - llena ambos tipos de campos si hay evidencia,
+    - no fuerces una clasificacion binaria.
+13) Para tecnicas lineales de temporizacion o activacion (por ejemplo profections, annual lord, time lord):
+    - si el texto indica como se usa la tecnica, extrae los pasos en procedure_steps.
+    - ejemplos validos: activar signo, identificar regente, interpretar asuntos.
 
 CRITERIOS DE POBLADO POR CAMPO:
 - concepts:
@@ -43,6 +56,24 @@ CRITERIOS DE POBLADO POR CAMPO:
 - procedures:
   llena con secuencias o metodos explicitos de analisis (pasos, orden de evaluacion, workflow).
   no llenes con recomendaciones aisladas no secuenciales.
+- procedure_steps:
+  llena solo con pasos explicitamente procedurales.
+  cada item debe ser objeto {{id, order, text}}.
+  usa id vacio si no estas seguro; el sistema lo regenerara.
+  si el texto formula una tecnica como "to use X", "to calculate X", "to determine X"
+  o describe una secuencia lineal de acciones (activar -> identificar -> interpretar),
+  conviertela en pasos minimos ordenados.
+- decision_rules:
+  llena con objetos {{condition, outcome, related_steps}}.
+  conserva forma condicional, no la conviertas en texto libre.
+- preconditions:
+  llena con objetos {{text, scope, related_steps}} cuando el procedimiento exige condiciones previas.
+- exceptions:
+  llena con objetos {{text, scope, related_steps}} para exclusiones, disqualifiers o excepciones.
+- author_variants:
+  llena con objetos {{author, kind, text, related_steps}} cuando autores distintos dan versiones diferentes.
+- procedure_outputs:
+  llena con objetos {{text}} cuando el procedimiento produce una decision, seleccion o resultado determinado.
 - terminology:
   llena con lexico tecnico relevante aunque no haya definicion formal.
   no llenes vocabulario generico no tecnico.
@@ -56,7 +87,7 @@ CRITERIOS DE POBLADO POR CAMPO:
   llena con excepciones, tensiones doctrinales, criterios abiertos o disputas.
   no llenes cuando el criterio es univoco y cerrado.
 
-schema_version debe ser exactamente "1.0.0".
+schema_version debe ser exactamente "2.0.0".
 
 METADATA:
 - chunk_id: {chunk_id}

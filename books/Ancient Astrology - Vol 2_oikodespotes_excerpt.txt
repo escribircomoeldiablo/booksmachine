@@ -1,0 +1,215 @@
+Sun
+Ascendant or Midheaven
+PTOLEMY Sun
+PAULUS Sun
+In sum, Porphyry, Dorotheus, Valens, and Paulus would accept the Sun as
+Predominator in the tenth house according to the whole-sign house sys­ tem. If Valens used Porphyry houses for this procedure, then he would have
+
+io6o CHAPTER 92 rejected both the Sun and the Moon as Predominators because of their cadency.
+Valens would have then defaulted to the Ascendant or Midheaven as Predominator. Ptolemy would also accept the Sun, even though it is cadent in the equal house system. He did not deem the cadency of the ninth house a problem due to its trine configuration to the Ascendant (though he did for the twelfth house, due to its aversion).
+CHART 11
+In the previous chapter, using Porphyry's method, we found the Predominator to be the Moon.
+DOROTHEUS* METHOD
+The Moon is the light of the sect. It is not located in the first, tenth, or eleventh houses. Neither is the Sun, the contrary light. The next candidate is the Lot of
+Fortune. Assuming our birth time is exact to the minute, Fortune is declining in the twelfth house and is also disqualified. The Prenatal Lunation is 290 Libra (the degree of the New Moon before birth, since this is a waxing Moon). That is also cadent in the third house and thus eliminated. Therefore, we must default to the Ascendant. A valid Predominator must be witnessed by one of its lords, in the following order. The bound lord is the first choice. The requirement for the bound lord is that it witnesses the Predominator from within its own bounds.
+Jupiter is the bound lord of the O5°38’ Leo Ascendant, but Jupiter at 230 Taurus is not within the range of Jupiter’s bounds, which extend from 01-06° Leo. To clarify this last point, Jupiter must be witnessing the Ascendant from the first six degrees of Taurus so that he casts his ray into his own bounds, i.e., into the first six degrees of Leo. In this particular instance, Jupiter would have to be in the first six degrees of Taurus (which are actually Venus ’ bounds) in order to send his ray into the first six degrees of Leo. Because he is at 230, he does not qualify.
+Thus, the remaining lords must be examined and for these, witnessing can occur by whole sign. Next in line is the domicile lord of the Leo Ascendant, which is the Sun. The Sun at 02° Scorpio witnesses the Ascendant by whole-sign square, which is sufficient for the Ascendant to be confirmed as Predominator.
+VALENS ’ METHOD
+Using either the whole-sign house system or the Porphyry house system, the Sun is located in the angular fourth house and the Moon in the succèdent fifth house.
+
+In this night chart, the Moon is stronger because of sect, even though the Sun is stronger by its angular position. The Moon is thus the Predominator.
+ptolemy ’s method
+Ptolemy set up an equal house system with the Ascendant beginning five degrees before the actual Ascendant degree. In Picassos chart, since his actual Ascen ­ dant is 05° Leo, his equal house chart begins with o° at the cusp of each house.
+The light of the sect, in this case the Moon, must be located in the first, eleventh, tenth, ninth, or seventh house. It is not, nor is the Sun. Since this is a night chart, he would look to a planet that is first of all in one of the authoritative releasing houses and which holds three or more rulership modes in the sign of the Moon, the Prenatal Full Moon, or the Lot of Fortune. Jupiter and Saturn, both located in the tenth house, are the only two planets that might begin to qualify. Jupiter is the domicile, triplicity, and bound lord of the Moon at o8°12 Sagittarius. Thus,
+Jupiter can qualify as the Predominator.
+PAULUS ’ METHOD
+Paulus looks first to the light of the sect, which in this case is the Moon. Since this is a night chart, he allows for the Moon to be located in the fifth house; thus it might be deemed the Predominator. As we shall see in our discussion of the
+Oikodespotes, this is by no means certain.
+Table 87. Alternative Procedures for the Predominator, Chart Two
+PORPHYRY Moon
+DOROTHEUS Ascendant
+VALENS I (WHOLE SIGN) Moon
+VALENS 2 (PORPHYRY) Moon
+PTOLEMY Jupiter
+PAULUS Moon
+In sum, the Moon is the choice for Porphyry, Valens, and perhaps Paulus; Dorotheus defaults to the Ascendant, and Ptolemy lands upon Jupiter. What is clear from both example charts is that all the astrologers looked to variations of simi­ lar requirements; the process of investigation could be complex, but did not nec­ essarily yield a definitive result. The various systems led to different conclusions.
+
+In most cases, once the Predominator (Epikratetor) had been determined, the Master of the Nativity (Oikodespotes) was derived from it. This discussion will continue in the following chapter. But first, you may want to try your hand at looking for your Predominator according to a different system. The next ex­ ercise leads you through Dorotheus* system for determining the Predominator.
+Using your own chart, complete exercise 51: Identifying the Predomina­ tor—Alternative Procedure
+
+VARIATIONS IN THE SEARCH FOR THE PREDOMINATOR IO63
+IDENTIFYING THE PREDOMINATOR —ALTERNATI VE PROCEDURE
+Try your hand at determining the Predominator according to the alternative method given by Dorotheus.
+If neither the Sun nor Moon are located in the first, tenth, or eleventh houses, look to see if the Lot of Fortune or the Prenatal Lunation are located in one of these houses, which will give it the proper authority. Otherwise, default to the
+Ascendant. When you come to the first potential candidate, check to see if it is witnessed by one of its lords in order to ratify that choice.
+SUN AS POSSIBLE PREDOMINATOR 1. Do you have a day chart? yes/no 2. If no, go directly to the Moon.
+3. If you have a day chart, is the Sun in houses 1,10, or 11? yes/no 4. If yes, is the Sun witnessed by its bound lord within its own bounds? yes/no 5. If yes, stop. You have found the Predominator to be the Sun.
+6. If the bound lord does not witness the Sun within its own bounds, is the Sun witnessed by its triplicity, domicile, or exaltation lord (in this order) by whole­ sign configuration? yes/no 7· If yes, stop. You have found the Predominator to be the Sun.
+8. If the Sun is not in houses 1,10, or 11, or if it is, but it is not witnessed by any of its lords, disqualify the Sun and repeat this process with the Moon. If the Moon qualifies, the Moon is your Predominator.
+MOON AS POSSIBLE PREDOMINATOR 1. Do you have a night chart? yes/no 2. If you have a night chart, is the Moon in houses 1, io, or 11? yes/no 3. If yes, is the Moon witnessed by its bound lord within its own bounds?
+yes/no 4. If yes, stop. You have found the Predominator to be the Moon.
+5. If the bound lord does not witness the Moon within its own bounds, is the
+
+10Ó4 CHAPTER 92
+Moon witnessed by its triplicity domicile, or exaltation lord by whole-sign configuration? yes/no 6. If yes, stop. You have found the Predominator to be the Moon.
+7. If the Moon is not in houses 1,10, or 11, or if it is, but it is not witnessed by any of its lords, disqualify the Moon. Repeat this process with the Sun if you have a night chart. If the Sun qualifies, the Sun is your Predominator. Otherwise examine Fortune and the Prenatal Lunation.
+LOT OF FORTUNE OR PRENATAL LUNATION AS POSSIBLE
+PREDOMINATORS 1. If neither the Sun nor Moon qualify, repeat this process using the Lot of
+Fortune.
+2. Is the Lot of Fortune in houses 1,10, or 11, and witnessed by any of its lords in the appropriate manner? yes/no 3. If yes, the Lot of Fortune qualifies as the Predominator.
+4. If no, the Lot of Fortune does not qualify. Repeat with the Prenatal Lunation.
+5. Is the Prenatal Lunation in houses 1,10, or 11, and witnessed by any of its lords in the appropriate manner? yes/no 6. If yes, the Prenatal Lunation qualifies as the Predominator.
+7. If no, go to the Ascendant.
+ASCENDANT AS DEFAULT PREDOMINATOR 1. If none of these qualify, the default falls to the Ascendant.
+2. Is the Ascendant witnessed by any of its lords in the appropriate manner? yes/ no 3. If yes, the Ascendant qualifies as the Predominator.
+4. If no (the Ascendant is not witnessed by any of its lords) then you do not have a Predominator.
+Now that we have identified the Predominator as best we can, we are now ready to discover the Master of the Nativity (Oikodespotês).
+
+The Master of the Nativity (oikodespotes )
+THE PREDOMINATOR WAS SEEN AS THE SOURCE OF THE LIFE FORCE.
+It had two major functions. One was its use in length-of-life procedures. The other, which we detail in this chapter, is its role in appointing the Oikodespotes geneseds, the Master of the Nativity. For some astrologers, this planet was the su ­ preme ruler of the entire chart. In particular, it was thought to allot the number of years of a persons life.'
+The ancient astrological literature abounds with the search for a single Oi­ kodespotes geneseds. Over the centuries, the astrologers’ fascination with iden­ tifying the Oikodespotes was not unlike the timeless search for the fountain of youth. Antiochus said that the Oikodespotes shows the “vital times of men ”;1 2
+Firmicus Maternus stated that it denotes the “number of years of life”;3 and Pau ­ lus explained how to calculate the length of life based upon the condition of this planet.4 5 This technique became the basis for the Persian/Arabic al-kadkhudah and the Medieval alcochoden used to determine life expectancy.
+1 The procedures for determining the length of life and the number of years arc explored in chapters 96-97.
+2 A ntiochus , Summary 2.3.
+3 Firmicus , Mathesis 4-6.
+4 Paulus , Introduction 36.
+5 See volume 1, chapter 12, for an explanation of our translation of oikos as ’‘domicile” in or­ der to avoid confusion with the twelve houses, which were called “places” (topoi) in Greek.
+The literal translation of the term oikodespotes is “house (oikos) master (despotes)”* In Hellenistic culture, the master of the house is the head of the house­ hold, its inhabitants, the property, and the land. This is the person responsible for the management and upkeep of the domicile, and the final arbiter of all deci­ sions concerning the family and servants. The Greek word oikodespotes was also used to refer to a ruler of the city or state, who had similar powers and duties, but on a grander scale.
+
+io66 CHAPTER 93
+In an astrological context, the usual sense of oikodespotes is that of a planet that is the ruler of a sign and by extension the individual topics of the house occupied by that sign (as well as any planets located in that sign). However, the additional term geneseos (“geniture, nativity”) augments the meaning of oiko­ despotes to mean the master or ruler not just of an astrological house or zodiacal sign, but the master of the entire nativity. This is the meaning employed in the following chapters, which focus on the Oikodespotes as “Master of the Nativi­ ty”. Ulis use of the term has been capitalized to distinguish it from an ordinary house or sign ruler.6 6 Note that some translators render Oikodespotes as “Ruler of the Nativity”. To avoid confusing the reader, we will remain consistent in our usage by rendering Oikodespotes as “Master of the Nativity”, or “Master” for short (intentionally capitalized). When directly citing other translations, we will make a note to clarify any difference of usage.
+7 Porphyry , Introduction 30. The manuscript of the Antiochus text breaks off before ex­ plaining what to do once the Predominator has been identified.
+The Oikodespotes is the host of the life force that is embodied in the lights. In some ways it is similar to the role that the domicile lord of a planet plays when it is host to a guest that resides in its zodiacal sign. In this case, however, it is hosting the life force itself. The power and prestige of the planetary Oikodespotes lies in its authority to allot and distribute the number of years of a persons life.
+The Oikodespotes was used in various procedures to calculate the length of life and times of physical crisis. In addition, the ancient texts contain delinea­ tions for the Oikodespotes as Master of the Nativity that describe the character, constitution, bodily characteristics, illnesses, and manner of death, as well as the overall fortunate and unfortunate circumstances of the life. The Oikodespotes itself set the length of life, while its nature and condition indicated the quality of that life.
+IDENTIFYING THE OIKODESPOTES porphyry ’s method
+Once the predominating light or other predominating point is identified and confirmed, the Master of the Nativity (Oikodespotes) is simply the domicile lord of the Predominator. There was also a Joint-Master (Sunoikodespotes) of the Na­ tivity. For Porphyry, this was the bound lord of the Predominator.7
+Porphyry acknowledged other traditions that looked to the bound lord of the Ascendant as the Master of the Nativity, and to the domicile lord of the As ­ cendant as the Joint-Master. The importance of the bound lord was emphasized
+
+THE MASTER OF THE NATIVITY 1067 by many astrologers as confirming the potency of the Predominator. Porphyry straddles this controversy by giving the bound lord second place in his own system, and pointing out its primacy in other approaches.
+Porphyry was mute on the necessity that the domicile lord and bound lord be able to witness the Predominator as a prerequisite for receiving the highest office of Oikodespotes. However, he did specify that it was important to examine how the Master and Joint-Master were situated, whether they were configured to one another (by whole-sign aspect), and whether they testified to the As ­ cendant or to the Moon. As we have seen, some kind of witnessing seems to be involved in the process of settling upon the rulers of the nativity.
+Once again, we are left with many questions. Porphyry’s choice for the Mas ­ ter of the Nativity, the Oikodespotes, was the domicile lord of the Predominator, which was either the Sun, the Moon, or the Ascendant. This point further em ­ phasizes the great global power that the domicile lord of the Sun, Moon, or As ­ cendant potentially wields in a chart—beyond its rulership of a particular house or planet.
+VALENS ’ METHOD
+Valens taught that the Oikodespotes was found from the bound lord of the Pre­ dominator; this could be either the bound lord of the Sun or the Moon, or the bound lord of the degree marking the Ascendant or Midheaven.5 However, if the Oikodespotes was not witnessed by the Predominator, or if it was setting on the Descendant, the nativity would be without an Oikodespotes.8 9 8 V alens , Anthology 3.1.
+9 One of the significations associated with the seventh house was death, where the Sun disappears each night.
+10 For example, if the Moon is the Predominator at 26° Gemini, the domicile lord is Mercury and the bound lord, Saturn. If, in this chart. Mercury is at 04° Libra in the bounds of
+Saturn, and Saturn is at 06° Aquarius in the bounds of Mercury, this 'exchange of bounds” (also called mutual reception in another context) would negate the existence of a qualified
+Predominator according to this passage.
+11 V alens , Anthology 3.3.
+An Oikodespotes that was witnessed by the Sun or Moon in turn made the predomination more certain, especially if the lights were in angular houses or in profitable degrees. But if the lord of the Sun or Moon exchanged bounds with their bound lord, then the rulership of the chart would be without a Predomi­ nator.10 11
+In his discussion concerning longevity calculations," Valens looked to both the Predominator and the Oikodespotes, each of which had its own unique pro­
+
+io68 CHAPTER 93 cedure for timing the length of life. Hie results of each unique procedure, car­ ried out separately, were then compared and subject to further analysis. How ­ ever, if the chart lacked an Oikodespotes, the method was less straightforward.
+Valens discussed how to use an Oikodespotes if it was unwitnessed by the
+Predominator, as well as additional considerations if the nativity had a Predom­ inator as releaser but lacked an Oikodespotes. Although this situation brings up some unsettling questions—for instance, what kind of life occurs when there is no authoritative planet to apportion and distribute the life force over the dura­ tion of the natives lifespan?—Valens also provided numerous other procedures for calculating the length of life that were not based on the Predominator or on the Oikodespotes."
+PAULUS* METHOD
+Once Paulus had settled upon a Predominator,12 13 14 he chose one of its four zodiacal lords—domicile, exaltation, triplicity, or bound—to be the Master of the Nativ­ ity.*·* This lord was primarily chosen upon the strength of its rulership, but other factors could also contribute to its strength, such as morning rising, angularity, and location in its own throne (thus, if it had two or more modes of zodiacal rulership, it gained further strength). He wrote that it was especially important that the lord be able to witness the Predominator, though it is not clear from his text if this was absolutely required.
+12 V alens , Anthology 3.1, chart illustrations after 3.5,3.7,3.9,3.11; chart illustrations after 3.13.
+6.8, 7.4, 9 3» 9-8, 9-9» 913. 9-14» 9-16, 9.17.
+13 As detailed in chapter 92.
+14 As noted above (p. 1066), this is sometimes translated as “Rulership”.
+Here we see that the identification of the Oikodespotes involved assessing the lords in terms of their zodiacal power, as well as their visibility, angularity, and witnessing. These are all factors that Porphyry, in the previous century, had required for the choice of the Lord (Kurios) of the Nativity.
+Having settled upon the planet that assumed rulership of the nativity, Pau ­ lus then indicated the number of years of life that each planet allotted to the per­ son in accordance with the greater number of years of that planet. This method will be described in chapter 97.
+FIRMICUS AND PTOLEMY
+Firmicus Maternus recorded some of the varying traditions, but then posed an altogether different procedure for identifying the Oikodespotes. He took the do­
+
+THE MASTER OF THE NATIVITY IO69 micile lord of the zodiacal sign following that of the natal Moon (but skipping over Cancer and Leo), because in his opinion the Sun and Moon could never be the Oikodespotes. The example that Firmicus gave to determine the Oikodes­ potes of the entire chart is that of a person born with the Moon in Gemini. It is necessary to skip over Cancer and Leo, and then land upon Virgo, which would make Mercury —the domicile lord of Virgo—the ruler of the nativity.15 Firmicus was clear that the Sun or Moon could never be the ruler of the nativity. However, he did allow the lights to influence the character and physical appearance of the native if the lights were co-present with the ruler, if they witnessed it with a favorable aspect, or if the ruler was the domicile or bound lord of the light.*6 15 Firmicus , Mathesis 4-6.
+16 Firmicus , Mathesis 4.8.31-40.
+17 Ptolemy , Tctrabiblos 4.10.
+18 Anthology 2.41.3-4.
+Ptolemy had a complex method for the determination of the Predominator, which he used as a starting point for calculating the length of life. However, he did not seek a single Oikodespotes from the Predominator. He stated that there was not one single planet that had dominion over the many contradictory for­ tunate and unfortunate experiences that might occur during the same period of time, but rather many ruling planets that each governed specific topics.
+He presented a method of releasing from the Ascendant for events relating to the body and journeys abroad; from the Lot of Fortune for matters of proper­ ty; from the Moon for affections of the soul and for marriage; from the Sun for dignities and glory; and from the Midheaven for other matters such as actions, friendships, and the begetting of children.17 18
+THE GLOBAL ROLE OF THE OIKODESPOTES
+In a discussion concerning the scope of the Oikodespotes and whether or not it was possible for one star, even though it is an Oikodespotes, to give uniformly good or bad fortune on all topics throughout the life, Valens included a passage from Petosiris, whom he said had obscured it mysteriously:
+Beginning, end, dominion over all the places under examination— the star according to each nativity that is the Oikodespotes, which makes clear beforehand for the children which ones will have life and what kind of support they will have for it, what kind of character they will have and the form of their body, all of this follows from this star.
+And without this star, there is nothing, neither action nor reputation, that exists for anyone.* 8
+
+The Oikodespotës has two clear-cut roles as the Master of the Nativity. The first is denoting the years of life, which we will discuss in the final chapters. The second is the shaping of the character, constitution, and appearance of the in­ dividual. The Hellenistic astrologers acknowledged the intimate connection be­ tween the Oikodespotës and the bound lords. Indeed, this seems to be the major application of the bound lord rulership system. The cumulative zodiacal bound lord degrees of each planet determined the greater years ascribed to that planet, and formed the starting point for length-of-life determinations.
+Porphyry designated the bound lord of the Predominator as the Joint-Mas­ ter (Sunoikodespotës), and acknowledged several traditions where the bound lord of the Ascendant was the Oikodespotës. Valens looked to the bound lord of the Predominator for the office of Oikodespotës. Dorotheus looked first to the bound lord of the Predominator to confirm the Predominators authority to release the times of life, before considering other options. Paulus included the bound lord in his assessment concerning which of the Predominator s lords was most qualified for the rulership of the nativity, and then looked to its greater years (which were derived from the bound lords) for determining the num ­ ber of years of life. Firmicus Maternus, like Paulus, looked to the Oikodespotës’ greater years for the indication of the years of life. Ptolemy gave second place to the bound lords of the many ruling planets (oikodespotai) that governed the fortunate and unfortunate events of life in accordance with their specific topics.
+The most comprehensive character delineations for the Master of the Na­ tivity are contained in Firmicus Maternus and Rhetorius.19 Because neither the
+Sun nor Moon are given descriptions as rulers or lords of the nativity, we must assume that both authors were following the tradition of considering only the five planets that are bound lords to identify the Master of the Nativity. These descriptions articulate the qualities of a persons character, their professional indications, as well as their physical constitution and bodily illnesses.
+19 Firmicus , Mathesis 4.6-8, trans. H olden ; Rhetorius , Compendium, excerpt from
+T eucer of Babylon .
+Here are two examples. The first, from Teucer of Babylon, is when Jupiter assumes the role of the Master of the Nativity:
+When Jupiter receives the rulership [Oikodespotës] of the nativity upon an angle by day and operates in its own domicile or that of a sect mate, it indicates important and notable persons, acceptable, re­ vered, good, open-hearted, high-minded, those who accomplish mat­ ters beyond the power of cities or the common people, those who are received by kings and other great people, well-spoken because of their virtue and piety, those who prepare honors of sacred offerings, affec­
+
+THE MASTER OF THE NATIVITY 1071 tionate towards family and beneficent to friends, and who delight in their wives and children, unless Jupiter occurs upon the setting angle, for then they are not blessed with children in this way.
+If Jupiter is greatly damaged by destructive stars striking its benefi­ cence, in a manner similar to others, they have much less power for generosity and their advancements will be regarded with jealousy.
+And Jupiter itself has similar significations in accordance with itself;
+whatever configurations it makes with other stars will be said in what follows.
+And it makes white-skinned persons, plump, full-bearded, good man ­ ners, dignified, large, broad-browed, bright-eyed, hair in the nostrils, bald, a large head, giving good counsel. This person will die from a sore throat, pneumonia, headache, heart conditions, apoplexy, and those conditions that arise from an excess of wind.10 20 On the Nature of the Planets (from T eucer of Babylon as transmitted by Rhetorius ), ccac 7, p. 216.
+21 Firmicus , Mathesis 4.7.13, trans. H olden .
+The second, from Firmicus Maternus, describes Mars. Note the descriptions of the character traits and the physical body and its aliments:
+If Mars is made the Ruler [Oikodespotes] of the Nativity, it will make rugged, invincible persons, and those who cannot be subjugated by any means, excitable, contentious persons, daring, prone to dangers, violent persons, who are accustomed to be deceived in frequent ways, gluttonous persons who digest much food in the easiest way, strong, equable, vehement.
+And persons with red hair, bloodshot eyes, imperious, and always claiming the principal insignia of power for themselves. They are al­ ways practicing arts involving fire and hot iron, but they are prepos­ terous in their hot temper. And they do not have affection for their wife, or their children, or their friends. They are daring and those who crave other peoples possessions with an envious desire. But it will make bodily defects from fire and iron, i.e., from cuts and burn­ ing; and he frequently falls down from the highest places or breaks his extremities; but it will make his death to be either sudden or violent.-1 20 21
+
+EVALUATING THE OIKODESPOTES
+In a conceptual structure predicated upon the distinction between day and night, light and dark, good and bad, all the absolute qualities that were noble and productive of life were attributed to the benefic planets, while the ignoble and destructive qualities were linked to the malefic planets. Here we see the stark contrast between Jupiter and Mars in the descriptions of character arising from the Master of the Nativity. Keep in mind that this is the baseline that is subject to many modifications due to other factors. The final step of this process is to evaluate the condition of the Oikodespotes in order to judge the vitality, well-being, character, and length of life. Firmicus Maternus gave an extensive list of criteria by which to evaluate the Master of the Nativity:
+For if it [Oikodespotes] possesses the sum of the whole nativity, and the decrees of the individual stars are allotted by it; which, if it is well posited in those signs in which it rejoices or in which it is exalted, or in its own domiciles, and the nativity was of its own sect, and it was not struck by a harmful aspect of the malefics, nor was it devoid of the protection of the benefic stars, it denotes all good things in accordance with the quality of its own nature, and whole number of years [of life]. But if it is impedited by the malefics or deserted by the benefics, all of its efficacy languishes in a debilitated [state].22
+Embedded within the delineation texts are instructions to consider whether the Oikodespotes belonged to the sect of the chart, occupied its own domiciles or exaltation, was located in angular or succedent houses, and was rising. If so, it gave good character in accordance with its nature, and overall success by means of the things it signified.
+Sect was an especially important factor in the evaluation of an Oikodespotes.
+Near the end of the description of Mars are the following statements:
+For generally, it is necessary to notice that the benefic stars lessen their good deeds when operating contrary to the sect of the chart, while the destructive stars, in their own domiciles and belonging to the sect of the chart, bring forth activity that is dangerous and ma ­ lignant along with harm. But, the malefic stars when in the places of the opposite sect and acting according to sect are more difficult with respect to harm. And whatever stars happen to be in ineffective signs or setting under the beams, having been found as lords (Kurios) or
+Firmicus , Mathesis 4.6.1, trans. H olden .
+
+THE MASTER OF THE NATIVITY 1073 rulers (Oikodespotes) of the nativity, they show these nativities to be lowly and without advancement.23 23 T eucer , in Rhetorius , Compendium, ccag 7, pp. 218-19.
+24 T eucer , in Rhetorius , Compendium, trans. H olden : '‘rulership of the nativity" = “Master of the Nativity".
+25 T eucer , in Rhetorius , Compendium, trans. H olden : “rulership of the nativity” = “Master of the Nativity”.
+This suggests that the benefics lessen their good when contrary to sect, but the malefics, when belonging to the sect of the chart and in their own domiciles, still have the ability to be harmful—but even more so when located in the domi­ ciles of the opposite sect or contrary to the sect of the chart. Here is an example from Teucer comparing the quality of the life when Saturn, as the Master of the
+Nativity, is well-situated as opposed to poorly situated:
+And when this star takes rulership of the nativity [...] being effective by day in a nativity in its own domiciles or its exaltation, of the same sect, angular, or being succèdent and oriental (visible), it will give rul­ ership of fields or buildings or watery property, excellent holdings, or the possessions of others [...] And acting in nocturnal nativities, and in the domicile of the other sect, angular or succèdent, it is injurious, bringing dangers from powerful and elderly persons [...] and it brings debts, prison, and false accusations.24
+Here is another excerpt about Venus to compare with the earlier excerpt that was focused more on character traits rather than how the condition modi­ fies the character traits:
+When Venus has rulership of the nativity in a night chart and when it is effective in its own domicile or rising in sect, it will make hand­ some persons, witty, cleanly, illustrious, religious, loving tenderly [...] stand out in appearance, wearing gold, wealthy; if it operates contrary to sect it lessens the benefits for they are regarded with jealous hate.25
+As the condition of the Oikodespotes is increasingly compromised by being contrary to the sect of the chart, in the domiciles of contrary sect planets, ca­ dent, setting under the beams, and witnessed by malefics, its indications point to harm, illness, deprivation, ill repute, and unfortunate circumstances, as well as the reduction of the years of life.
+Teucer mentions that the aspect configurations to the Oikodespotes modify the judgment, and he indicates that these delineations are covered in the subse­
+
+1074 CHAPTER 93 quent sections of the work. However, these passages are no longer extant in the
+Teucer text as transmitted by Rhetorius. The Firmicus text incorporates some of this material.
+-► EXAMPLE CHARTS
+Let us look at our example charts to identify the Oikodespotes (Master) and Sunoikodespotes (Joint-Master) of the Nativity.
+CHART I
+We will first apply Porphyry’s method for determining the Oikodespotes, and then compare the result with some of the other approaches. Be aware that we may not always arrive at a definitive conclusion. However, we will familiarize ourselves with the general procedure and the considerations of the search. Also keep in mind that the purpose of this chapter is to identify the Oikodespotes as one of the Rulers of the Nativity, and to explain how to evaluate and delineate it.
+The procedures for determining life expectancy, while touched on here, will be explored separately in the final chapters.
+porphyry ’s method
+Having accepted the Sun as Predominator, Porphyry would then take the do­ micile lord of the Sun as the Master of the Nativity. Since the Sun is in Leo, it is its own domicile lord and therefore Oikodespotes. The Sun (O5°O9' Leo) is in the bounds of Jupiter (oo°-o6° Leo), who is thus the Joint-Master. Porphyry’s first method thus gives the Sun as Master and Jupiter as Joint-Master. Both plan­ ets witness each other by sextile; the Sun squares the Ascendant and trines the
+Moon; Jupiter witnesses the Moon (sextile) but not the Ascendant (aversion).
+Overall, these two rulers cooperate in supporting the life force.
+Some astrologers, according to Porphyry, simply used the Ascendants bound lord and domicile lord to indicate the Master and Joint-Master respec­ tively. In Jacqueline’s chart, the bound lord of the Ascendant (17°58' Scorpio) is
+Mercury and the domicile lord, Mars. No further requirements are made. Thus, with this approach, Mercury is the Master and Mars the Joint-Master.
+valens ’ method
+Using the whole-sign house system, the Sun is the Predominator because of its
+
+THE MASTER OF THE NATIVITY 1075 location in the angular tenth house (chosen over the Moon in the cadent sixth house). The bound lord of the O5°O9 Leo Sun is Jupiter. Jupiter witnesses the
+Sun by sextile which confirms it as Oikodespotes.
+Using the Porphyry house system, the Sun and Moon are disqualified due to their cadent locations in the ninth and sixth houses, respectively. Thus, if pre­ domination goes to the Ascendant, the bound lord of the 170 Scorpio Ascendant is Mercury at 02° Leo. Mercury witnesses the Ascendant by a whole-sign square, thus qualifying as the Oikodespotes. If predomination goes to the Midheaven at 28° Leo, the bound lord is Mars at 14° Virgo, which is in aversion to the Mid­ heaven. In this case, the chart is without an Oikodespotes.
+PAULUS* METHOD
+Using a whole-sign house system, the Sun at 05° Leo in this diurnal chart is located in the tenth house—an effective releasing house. We next examine the
+Suns bound lord, which is Jupiter at 09° Gemini, and then compare this to the
+Sun, which is the triplicity lord of Leo; there is no exaltation lord in Leo. The Sun is the triplicity lord of Leo and is placed in an angular house. By contrast, Jupiter does not have any rulership modes in Leo (aside from being the triplicity lord by night, but this is a day chart), and he is located in a succedent house. The Sun is clearly the stronger of the two, and Paulus, unlike some of the other Hellenistic astrologers, allowed for the Sun and Moon to be Masters of the Nativity.26 Thus, the Sun is the Oikodespotes in this chart.
+DOROTHEUS* METHOD
+Dorotheus examined whether one of the Predominators planetary lords could witness it and thereby confirm its authority to release the times of life. Here, the
+Sun in Leo is its own domicile and triplicity lord and is thus able to witness and confirm itself. For Dorotheus, this is its only function; other Hellenistic astrolo­ gers regarded it as the Oikodespotes, the Master of the Nativity used in character delineation and in a different longevity technique.
+FIRMICUS MATERNUS* METHOD
+Firmicus Maternus looked for the Oikodespotes in the planet that was the do­ micile lord of the zodiacal sign following that of the Moon (excluding the signs 26 Paulus , Introduction 3.3.
+
+Cancer and Leo). Thus, because the native’s Moon is in Aries, Firmicus would go to Taurus and appoint Venus as Oikodespotês.
+ptolemy ’s method
+Ptolemy did not look for a single Oikodespotês, but rather enumerated five dif­ ferent ruling planets or positions (thus, several oikodespotai). Each of these oiko­ despotai governed the timing of a specific topic of importance in the life.
+SUMMARY AND ASSESSMENT, CHART I
+According to the various systems, the contenders for the office of Oikodespotês are the Sun (following Porphyry and Paulus), Mercury (following the more gen ­ eral procedure of looking to the Ascendant, or Valens ’ method using Porphyry houses), Jupiter (Valens’ method using whole-sign houses), and Venus (Firmic­ us Maternus). Only Porphyry mentions a Joint-Master (Sunoikodespotesf, the contenders for this office are Jupiter and Mars.
+Table SS. Predominator, Master, and Joint-Master of the Nativity, Chart One
+PREDOMINATOR (Epikratëtôr)
+MASTER (Oikodespotês)
+JOINT-MASTER (Sunoikodespotës)
+PORPHYRY 1 Sun Sun Jupiter
+PORPHYRY 2 Ascendant Mercury Mars
+VALENS (WHOLE SIGN) Sun Jupiter —
+VALENS(PORPHYRY) Ascendant Mercury —
+PAULUS Sun Sun —
+DOROTHEUS Sun — —
+FIRMICUS — Venus —
+PTOLEMY (EQUAL) Sun — —
+Let us look more closely at each one and assess its condition. We are not trying to make our choice based upon the planet that is in the best condition.
+Ideally, having made our choice as to the system we are following, we would ac­ cept whatever result our system yielded. But to the extent that we are surveying several different systems, we can speculate as to which planet might be more descriptive of her overall character.
+
+THE MASTER OF THE NATIVITY 1077 the sun is the choice of Porphyry as well as Paulus. The Sun is in excel­ lent condition—sect leader of the chart, in its own domicile and triplicity, lo­ cated in the strong, angular tenth house, witnessed favorably by both benefics, and without negative testimony from the malefics. The Sun is configured to Jupiter, its Joint-Master, by the favorable sextile, and to the Moon and the
