@@ -15,6 +15,7 @@ CONSOLIDATED_FIELDS: tuple[str, ...] = (
 )
 
 ONTOLOGY_FIELDS: tuple[str, ...] = (
+    "family_id",
     "aliases",
     "definitions",
     "technical_rules",
@@ -25,6 +26,8 @@ ONTOLOGY_FIELDS: tuple[str, ...] = (
     "parent_concepts",
     "child_concepts",
     "related_concepts",
+    "belongs_to_families",
+    "family_members",
 )
 
 _EQUIVALENCE_FAMILIES: tuple[tuple[str, tuple[str, ...]], ...] = (
@@ -70,6 +73,7 @@ def _dedupe_ints_sorted(items: list[int]) -> list[int]:
 def _new_ontology_node(concept: str) -> dict[str, object]:
     return {
         "concept": concept,
+        "family_id": "",
         "aliases": [],
         "definitions": [],
         "technical_rules": [],
@@ -81,6 +85,8 @@ def _new_ontology_node(concept: str) -> dict[str, object]:
         "parent_concepts": [],
         "child_concepts": [],
         "related_concepts": [],
+        "belongs_to_families": [],
+        "family_members": [],
         "node_kind": "topic",
     }
 
@@ -204,20 +210,84 @@ def apply_taxonomy_links(
     return linked
 
 
+def apply_family_memberships(
+    ontology: dict[str, dict[str, object]],
+    family_memberships: dict[str, object] | None = None,
+) -> dict[str, dict[str, object]]:
+    """Attach fixed family nodes and concept-to-family relationships."""
+    if not family_memberships:
+        return ontology
+
+    families = family_memberships.get("families", [])
+    if not isinstance(families, list):
+        return ontology
+
+    linked = {
+        concept_name: dict(payload)
+        for concept_name, payload in ontology.items()
+    }
+    for payload in linked.values():
+        payload.setdefault("family_id", "")
+        payload.setdefault("belongs_to_families", [])
+        payload.setdefault("family_members", [])
+        payload.setdefault("aliases", [])
+        payload.setdefault("definitions", [])
+        payload.setdefault("technical_rules", [])
+        payload.setdefault("procedures", [])
+        payload.setdefault("terminology", [])
+        payload.setdefault("examples", [])
+        payload.setdefault("relationships", [])
+        payload.setdefault("source_chunks", [])
+        payload.setdefault("parent_concepts", [])
+        payload.setdefault("child_concepts", [])
+        payload.setdefault("related_concepts", [])
+        payload.setdefault("node_kind", "topic")
+
+    for family in families:
+        if not isinstance(family, dict):
+            continue
+        family_id = str(family.get("family_id", "")).strip()
+        family_label = str(family.get("label", "")).strip()
+        members = family.get("members", [])
+        if not family_id or not family_label or not isinstance(members, list):
+            continue
+
+        family_node = linked.get(family_label, _new_ontology_node(family_label))
+        family_node["family_id"] = family_id
+        family_node["node_kind"] = "family"
+        family_node["family_members"] = []
+        source_chunks: list[int] = list(family_node.get("source_chunks", []))
+
+        for member_name in members:
+            if not isinstance(member_name, str) or member_name not in linked:
+                continue
+            member_node = linked[member_name]
+            _append_relation(member_node, "belongs_to_families", family_label)
+            _append_relation(family_node, "family_members", member_name)
+            source_chunks = _dedupe_ints_sorted(source_chunks + list(member_node.get("source_chunks", [])))
+
+        family_node["source_chunks"] = source_chunks
+        linked[family_label] = family_node
+
+    return linked
+
+
 def build_ontology(
     concepts: dict[str, dict[str, object]],
     taxonomy_links: list[dict[str, object]] | None = None,
+    family_memberships: dict[str, object] | None = None,
     *,
     enable_legacy_fallback: bool = True,
 ) -> dict[str, dict[str, object]]:
     """Build the final ontology artifact from canonical concept payloads."""
     merged, canonical_map = resolve_equivalence_families(concepts)
-    return apply_taxonomy_links(
+    linked = apply_taxonomy_links(
         merged,
         canonical_map,
         taxonomy_links=taxonomy_links,
         enable_legacy_fallback=enable_legacy_fallback,
     )
+    return apply_family_memberships(linked, family_memberships=family_memberships)
 
 
 def build_ontology_output_path(input_path: str, output_folder: str | None = None) -> str:

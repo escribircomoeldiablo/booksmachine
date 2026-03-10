@@ -1,0 +1,108 @@
+[
+  {
+    "id": "house_classification",
+    "label": "house classification",
+    "aliases": ["angular houses", "succedent houses", "cadent houses"]
+  },
+  {
+    "id": "planetary_phases",
+    "label": "planetary phases",
+    "aliases": [
+      "synodic phase",
+      "heliacal rising",
+      "heliacal setting",
+      "heliacal morning rise",
+      "heliacal evening set",
+      "acronychal phase",
+      "morning star phase",
+      "evening star phase",
+      "lying hidden phase",
+      "phase",
+      "phasis",
+      "solar phase cycle",
+      "in heart cazimi",
+      "combust"
+    ],
+    "controlled_patterns": [
+      "heliacal morning rise",
+      "heliacal evening set"
+    ],
+    "notes": "Visibility and solar-phase conditions with explicit phasal terminology."
+  },
+  {
+    "id": "lunar_motion",
+    "label": "lunar motion",
+    "aliases": ["void in course moon", "lunar application", "lunar separation"]
+  },
+  {
+    "id": "aspect_dynamics",
+    "label": "aspect dynamics",
+    "aliases": [
+      "application",
+      "separation",
+      "applying aspect",
+      "separating aspect"
+    ]
+  },
+  {
+    "id": "maltreatment",
+    "label": "maltreatment",
+    "aliases": ["striking with ray", "maltreatment by opposition"]
+  },
+  {
+    "id": "sect",
+    "label": "sect",
+    "aliases": [
+      "sect",
+      "sect light",
+      "contrary to sect"
+    ],
+    "notes": "Day/night sect doctrine and sect-dependent status."
+  },
+  {
+    "id": "configuration",
+    "label": "configuration",
+    "aliases": [
+      "configuration",
+      "conjunction",
+      "bodily conjunction",
+      "figural conjunction",
+      "co presence",
+      "aversion",
+      "adherence",
+      "assembly",
+      "diameter",
+      "hexagon"
+    ],
+    "notes": "Aspectual and configurational relations with explicit technical names."
+  },
+  {
+    "id": "dignities",
+    "label": "dignities",
+    "aliases": [
+      "dignity",
+      "domicile",
+      "domicile lord",
+      "exaltation",
+      "fall",
+      "detriment",
+      "bound term",
+      "bound lord rulership system",
+      "decan face",
+      "dispositor",
+      "almuten"
+    ],
+    "notes": "Essential dignities, debilities, and dignity-based rulership terms."
+  },
+  {
+    "id": "lots",
+    "label": "lots",
+    "aliases": [
+      "hermetic lot",
+      "lot arabic part",
+      "lot of fortune tuche",
+      "lot of spirit daimon"
+    ],
+    "notes": "Arabic parts and named lots with explicit technical labels."
+  }
+]

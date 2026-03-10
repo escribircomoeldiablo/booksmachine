@@ -8,15 +8,19 @@ from unittest.mock import patch
 
 from src.knowledge_consolidator import (
     _build_canonical_concepts,
+    _build_family_payload,
     _build_taxonomy_comparison_payload,
     _build_taxonomy_audit_payload,
     _build_taxonomy_output_path,
     _export_taxonomy_audit,
     build_concept_index,
     build_concepts_output_path,
+    build_families_output_path,
+    build_knowledge_families,
     build_knowledge_ontology,
     consolidate_knowledge_chunks,
     export_concepts,
+    export_families,
     load_chunk_knowledge,
     merge_concept_knowledge,
     normalize_concepts,
@@ -186,6 +190,38 @@ class KnowledgeConsolidatorTests(unittest.TestCase):
         self.assertEqual(merged["angular house"]["definitions"], ["Angular houses: The strongest houses."])
         self.assertEqual(merged["angular house"]["examples"], ["Angular houses include the 1st, 4th, 7th, and 10th."])
         self.assertNotIn("Predominator: The source of life force.", merged["house system"]["definitions"])
+
+    def test_merge_concept_knowledge_preserves_minimal_structural_parent_payload_for_closed_family(self) -> None:
+        chunks = [
+            {
+                "chunk_index": 34,
+                "concepts": ["Angularity and favorability of house", "Good houses", "Bad houses or places"],
+                "_normalized_concepts": [
+                    "angularity and favorability of house",
+                    "good houses",
+                    "bad houses or places",
+                ],
+                "_chunk_type": "",
+                "_decision": "extract",
+                "definitions": [],
+                "technical_rules": [],
+                "procedures": [],
+                "terminology": ["Good houses", "Bad houses or places"],
+                "examples": [],
+                "relationships": [],
+            }
+        ]
+
+        merged = merge_concept_knowledge(
+            {"angularity and favorability of house": [34], "good houses": [34], "bad houses or places": [34]},
+            chunks,
+        )
+
+        self.assertEqual(
+            merged["angularity and favorability of house"]["terminology"],
+            ["Good houses", "Bad houses or places"],
+        )
+        self.assertEqual(merged["angularity and favorability of house"]["source_chunks"], [34])
 
     def test_export_and_full_consolidation_write_expected_json(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -360,6 +396,48 @@ class KnowledgeConsolidatorTests(unittest.TestCase):
                 ],
             )
 
+    def test_canonical_builder_preserves_closed_structural_parent_for_taxonomy_pattern(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            base = Path(tmpdir)
+            chunks_path = base / "Ancient Astrology - Vol 2_knowledge_chunks.jsonl"
+            audit_path = base / "Ancient Astrology - Vol 2_knowledge_audit.jsonl"
+            _write_jsonl(
+                chunks_path,
+                [
+                    {
+                        "chunk_id": "chunk_33_0_100",
+                        "concepts": ["Angularity and favorability of house", "Good houses", "Bad houses or places"],
+                        "definitions": [],
+                        "technical_rules": [],
+                        "procedures": [],
+                        "terminology": ["Good houses", "Bad houses or places"],
+                        "relationships": [],
+                        "examples": [],
+                        "ambiguities": [],
+                    }
+                ],
+            )
+            _write_jsonl(
+                audit_path,
+                [{"chunk_id": "chunk_33_0_100", "chunk_index": 34, "decision": "extract"}],
+            )
+
+            canonical = _build_canonical_concepts(str(chunks_path))
+            audit_payload = _build_taxonomy_audit_payload(str(chunks_path))
+
+            self.assertIn("favorability of house", canonical)
+            self.assertEqual(
+                canonical["favorability of house"]["terminology"],
+                ["Benefic houses", "Malefic houses"],
+            )
+            self.assertEqual(
+                [(link["parent"], link["child"]) for link in audit_payload["links"]],
+                [
+                    ("favorability of house", "benefic houses"),
+                    ("favorability of house", "malefic houses"),
+                ],
+            )
+
     def test_export_taxonomy_audit_writes_minimal_json_file(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:
             output_path = Path(tmpdir) / "Book_knowledge_taxonomy.json"
@@ -516,6 +594,95 @@ class KnowledgeConsolidatorTests(unittest.TestCase):
             self.assertEqual(ontology_exported["chrematistikos"]["related_concepts"], ["house angularity"])
             self.assertIn("whole sign house system", ontology_exported)
             self.assertEqual(ontology_exported["whole sign house system"]["aliases"], [])
+
+    def test_build_knowledge_families_writes_family_artifact(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            base = Path(tmpdir)
+            chunks_path = base / "Ancient Astrology - Vol 1_knowledge_chunks.jsonl"
+            audit_path = base / "Ancient Astrology - Vol 1_knowledge_audit.jsonl"
+            _write_jsonl(
+                chunks_path,
+                [
+                    {
+                        "chunk_id": "chunk_5_0_100",
+                        "concepts": ["Void in course moon"],
+                        "definitions": ["Void in course moon: the moon does not perfect an aspect before leaving its sign."],
+                        "technical_rules": [],
+                        "procedures": [],
+                        "terminology": ["lunar application"],
+                        "relationships": [],
+                        "examples": [],
+                        "ambiguities": [],
+                    },
+                    {
+                        "chunk_id": "chunk_6_100_200",
+                        "concepts": ["Celestial sympathy"],
+                        "definitions": ["Celestial sympathy: affinity linking distant celestial causes and terrestrial effects."],
+                        "technical_rules": [],
+                        "procedures": [],
+                        "terminology": [],
+                        "relationships": [],
+                        "examples": [],
+                        "ambiguities": [],
+                    }
+                ],
+            )
+            _write_jsonl(
+                audit_path,
+                [
+                    {"chunk_id": "chunk_5_0_100", "chunk_index": 6, "decision": "extract"},
+                    {"chunk_id": "chunk_6_100_200", "chunk_index": 7, "decision": "extract"},
+                ],
+            )
+
+            families_output_path = build_knowledge_families(str(chunks_path))
+            families_exported = json.loads(Path(families_output_path).read_text(encoding="utf-8"))
+
+            self.assertTrue(families_output_path.endswith("_knowledge_families.json"))
+            family_ids = {family["family_id"] for family in families_exported["families"]}
+            self.assertIn("lunar_motion", family_ids)
+            lunar_motion = next(family for family in families_exported["families"] if family["family_id"] == "lunar_motion")
+            self.assertIn("void in course moon", lunar_motion["members"])
+            self.assertIn("celestial sympathy", families_exported["unassigned_concepts"])
+
+    def test_build_knowledge_ontology_adds_family_nodes_even_without_taxonomy(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            base = Path(tmpdir)
+            chunks_path = base / "Ancient Astrology - Vol 1_knowledge_chunks.jsonl"
+            audit_path = base / "Ancient Astrology - Vol 1_knowledge_audit.jsonl"
+            _write_jsonl(
+                chunks_path,
+                [
+                    {
+                        "chunk_id": "chunk_5_0_100",
+                        "concepts": ["Void in course moon"],
+                        "definitions": ["Void in course moon: the moon does not perfect an aspect before leaving its sign."],
+                        "technical_rules": [],
+                        "procedures": [],
+                        "terminology": ["lunar separation"],
+                        "relationships": [],
+                        "examples": [],
+                        "ambiguities": [],
+                    }
+                ],
+            )
+            _write_jsonl(
+                audit_path,
+                [{"chunk_id": "chunk_5_0_100", "chunk_index": 6, "decision": "extract"}],
+            )
+
+            with patch("src.knowledge_consolidator.ONTOLOGY_ENABLE_INFERRED_TAXONOMY", False):
+                ontology_output_path = build_knowledge_ontology(str(chunks_path))
+
+            ontology_exported = json.loads(Path(ontology_output_path).read_text(encoding="utf-8"))
+            families_exported = json.loads(
+                Path(build_families_output_path(str(chunks_path))).read_text(encoding="utf-8")
+            )
+
+            self.assertEqual(families_exported["families"][0]["family_id"], "lunar_motion")
+            self.assertIn("lunar motion", ontology_exported)
+            self.assertEqual(ontology_exported["lunar motion"]["node_kind"], "family")
+            self.assertEqual(ontology_exported["void in course moon"]["belongs_to_families"], ["lunar motion"])
 
     def test_build_knowledge_ontology_keeps_legacy_behavior_when_inferred_taxonomy_flag_is_off(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:

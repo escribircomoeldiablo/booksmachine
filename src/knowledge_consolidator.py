@@ -12,6 +12,8 @@ from .concept_filter import filter_valid_concepts
 from .concept_normalization import normalize_concept_name
 from .config import ONTOLOGY_ENABLE_INFERRED_TAXONOMY
 from .concept_subconcept_promoter import promote_taxonomy_subconcepts, restore_promoted_subconcepts
+from .domain_families import load_family_catalog
+from .family_assigner import assign_families
 from .ontology_builder import build_ontology, build_ontology_output_path, export_ontology
 from .taxonomy_inference import infer_taxonomy_links
 
@@ -27,6 +29,23 @@ CONSOLIDATED_FIELDS: tuple[str, ...] = (
 _CHUNK_INDEX_RE = re.compile(r"^chunk_(\d+)_")
 _DEFINITION_HEAD_RE = re.compile(r"^\s*([^:]+):\s+.+$")
 _PAREN_SUFFIX_RE = re.compile(r"^\s*([^(]+?)\s*\(.+\)\s*$")
+_STRUCTURAL_PARENT_PROJECTION_SPECS: dict[str, dict[str, object]] = {
+    "house angularity": {
+        "aliases": ("house angularity", "angularity of house", "angularity and favorability of house"),
+        "children": ("angular house", "succedent house", "cadent house"),
+        "min_children": 3,
+    },
+    "favorability of house": {
+        "aliases": (
+            "favorability of house",
+            "angularity and favorability of house",
+            "fortunate and unfortunate house",
+            "fortunate and unfortunate houses",
+        ),
+        "children": ("benefic houses", "malefic houses"),
+        "min_children": 2,
+    },
+}
 
 
 def _derive_audit_path(path: str) -> Path:
@@ -157,6 +176,83 @@ def _field_values_for_concept(chunk: dict[str, object], concept: str, field_name
     return matched
 
 
+def _structural_parent_spec(concept: str) -> dict[str, object] | None:
+    for spec in _STRUCTURAL_PARENT_PROJECTION_SPECS.values():
+        aliases = {normalize_concept_name(alias) for alias in spec["aliases"]}
+        if concept in aliases:
+            return spec
+    return None
+
+
+def _chunk_structural_children(
+    chunk: dict[str, object],
+    *,
+    child_names: tuple[str, ...],
+) -> list[str]:
+    chunk_concepts = {
+        normalize_concept_name(value)
+        for value in chunk.get("concepts", [])
+        if isinstance(value, str)
+    }
+    chunk_concepts.update(
+        value
+        for value in chunk.get("_normalized_concepts", [])
+        if isinstance(value, str)
+    )
+    chunk_concepts.update(
+        _definition_head(value)
+        for value in chunk.get("definitions", [])
+        if isinstance(value, str) and _definition_head(value)
+    )
+    chunk_concepts.update(
+        _terminology_head(value)
+        for value in chunk.get("terminology", [])
+        if isinstance(value, str)
+    )
+
+    observed: list[str] = []
+    for child_name in child_names:
+        if child_name in chunk_concepts:
+            observed.append(child_name)
+    return _dedupe_preserve_order(observed)
+
+
+def _project_structural_parent_minimum(
+    payload: dict[str, object],
+    *,
+    concept: str,
+    source_chunks: list[int],
+    chunk_lookup: dict[int, dict[str, object]],
+) -> None:
+    spec = _structural_parent_spec(concept)
+    if spec is None:
+        return
+    if any(payload.get(field_name) for field_name in ("definitions", "technical_rules", "procedures", "relationships")):
+        return
+
+    child_names = tuple(str(child) for child in spec["children"])
+    min_children = int(spec["min_children"])
+    preserved_terms: list[str] = []
+    supporting_chunks: list[int] = []
+
+    for chunk_index in source_chunks:
+        chunk = chunk_lookup.get(chunk_index)
+        if not chunk:
+            continue
+        observed_children = _chunk_structural_children(chunk, child_names=child_names)
+        if len(observed_children) < min_children:
+            continue
+        supporting_chunks.append(chunk_index)
+        for child_name in observed_children:
+            preserved_terms.append(child_name.replace(" house", " houses").title().replace(" Houses", " houses"))
+
+    if not supporting_chunks or not preserved_terms:
+        return
+
+    payload["terminology"] = _dedupe_preserve_order(list(payload["terminology"]) + preserved_terms)
+    payload["source_chunks"] = _dedupe_preserve_order(list(payload["source_chunks"]) + supporting_chunks)
+
+
 def load_chunk_knowledge(path: str) -> list[dict]:
     """Load chunk-level JSONL records, excluding skipped chunks when audit data exists."""
     audit_map = _load_audit_map(path)
@@ -238,6 +334,13 @@ def merge_concept_knowledge(concept_index: dict, chunks: list[dict]) -> dict:
         for field_name in CONSOLIDATED_FIELDS:
             payload[field_name] = _dedupe_preserve_order(payload[field_name])
 
+        _project_structural_parent_minimum(
+            payload,
+            concept=concept,
+            source_chunks=list(source_chunks),
+            chunk_lookup=chunk_lookup,
+        )
+
         merged[concept] = payload
 
     return merged
@@ -273,6 +376,17 @@ def _build_taxonomy_output_path(input_path: str, output_folder: str | None = Non
     return str(folder / filename)
 
 
+def build_families_output_path(input_path: str, output_folder: str | None = None) -> str:
+    """Build the family-level output path for a chunk JSONL input."""
+    source_path = Path(input_path)
+    folder = Path(output_folder) if output_folder else source_path.parent
+    if source_path.name.endswith("_knowledge_chunks.jsonl"):
+        filename = source_path.name.replace("_knowledge_chunks.jsonl", "_knowledge_families.json")
+    else:
+        filename = f"{source_path.stem}_knowledge_families.json"
+    return str(folder / filename)
+
+
 def _build_canonical_concepts(path: str) -> dict[str, dict[str, object]]:
     """Build canonicalized concept payloads from one chunk knowledge artifact."""
     chunks = load_chunk_knowledge(path)
@@ -288,6 +402,12 @@ def _build_taxonomy_audit_payload(path: str) -> dict[str, list[dict[str, object]
     """Build inferred taxonomy audit payload from canonical concepts."""
     concepts = _build_canonical_concepts(path)
     return infer_taxonomy_links(concepts)
+
+
+def _build_family_payload(path: str) -> dict[str, object]:
+    """Build family assignment payload from canonical concepts."""
+    concepts = _build_canonical_concepts(path)
+    return assign_families(concepts, load_family_catalog())
 
 
 def _taxonomy_edges(ontology: dict[str, dict[str, object]]) -> list[dict[str, str]]:
@@ -343,6 +463,14 @@ def _export_taxonomy_audit(payload: dict[str, list[dict[str, object]]], output_p
         json.dump(payload, handle, ensure_ascii=False, indent=2)
 
 
+def export_families(payload: dict[str, object], output_path: str) -> None:
+    """Persist concept family assignments as a UTF-8 JSON artifact."""
+    destination = Path(output_path)
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    with destination.open("w", encoding="utf-8") as handle:
+        json.dump(payload, handle, ensure_ascii=False, indent=2)
+
+
 def consolidate_knowledge_chunks(path: str, output_path: str | None = None) -> str:
     """Run the full concept consolidation pipeline for one knowledge_chunks JSONL file."""
     concepts = _build_canonical_concepts(path)
@@ -351,12 +479,22 @@ def consolidate_knowledge_chunks(path: str, output_path: str | None = None) -> s
     return destination
 
 
+def build_knowledge_families(path: str, output_path: str | None = None) -> str:
+    """Build a family assignment artifact from consolidated concept knowledge."""
+    payload = _build_family_payload(path)
+    destination = output_path or build_families_output_path(path)
+    export_families(payload, destination)
+    return destination
+
+
 def build_knowledge_ontology(path: str, output_path: str | None = None) -> str:
     """Build an ontology artifact from consolidated concept knowledge."""
     concepts = _build_canonical_concepts(path)
+    family_payload = assign_families(concepts, load_family_catalog())
+    export_families(family_payload, build_families_output_path(path))
     taxonomy = infer_taxonomy_links(concepts)
     taxonomy_links = taxonomy["links"] if ONTOLOGY_ENABLE_INFERRED_TAXONOMY else None
-    ontology = build_ontology(concepts, taxonomy_links=taxonomy_links)
+    ontology = build_ontology(concepts, taxonomy_links=taxonomy_links, family_memberships=family_payload)
     destination = output_path or build_ontology_output_path(path)
     export_ontology(ontology, destination)
     return destination

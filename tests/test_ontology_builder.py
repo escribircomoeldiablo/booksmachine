@@ -6,6 +6,7 @@ from src.ontology_builder import (
     apply_taxonomy_links,
     build_ontology,
     build_ontology_output_path,
+    apply_family_memberships,
     resolve_equivalence_families,
 )
 
@@ -179,6 +180,53 @@ class OntologyBuilderTests(unittest.TestCase):
             inferred_plus_legacy["house angularity"]["child_concepts"],
             ["angular houses", "succedent houses", "cadent houses"],
         )
+
+    def test_apply_family_memberships_adds_family_nodes_and_concept_links(self) -> None:
+        ontology = {
+            "void in course moon": _payload(concept="void in course moon", source_chunks=[4]),
+            "lunar application": _payload(concept="lunar application", source_chunks=[5]),
+        }
+        family_payload = {
+            "families": [
+                {
+                    "family_id": "lunar_motion",
+                    "label": "lunar motion",
+                    "members": ["void in course moon", "lunar application"],
+                }
+            ]
+        }
+
+        linked = apply_family_memberships(ontology, family_memberships=family_payload)
+
+        self.assertIn("lunar motion", linked)
+        self.assertEqual(linked["lunar motion"]["node_kind"], "family")
+        self.assertEqual(linked["lunar motion"]["family_id"], "lunar_motion")
+        self.assertEqual(linked["lunar motion"]["family_members"], ["void in course moon", "lunar application"])
+        self.assertEqual(linked["lunar motion"]["source_chunks"], [4, 5])
+        self.assertEqual(linked["void in course moon"]["belongs_to_families"], ["lunar motion"])
+
+    def test_build_ontology_supports_family_memberships_when_taxonomy_is_empty(self) -> None:
+        concepts = {
+            "void in course moon": _payload(concept="void in course moon", source_chunks=[4]),
+        }
+
+        ontology = build_ontology(
+            concepts,
+            taxonomy_links=[],
+            family_memberships={
+                "families": [
+                    {
+                        "family_id": "lunar_motion",
+                        "label": "lunar motion",
+                        "members": ["void in course moon"],
+                    }
+                ]
+            },
+            enable_legacy_fallback=False,
+        )
+
+        self.assertIn("lunar motion", ontology)
+        self.assertEqual(ontology["void in course moon"]["belongs_to_families"], ["lunar motion"])
 
 
 if __name__ == "__main__":
