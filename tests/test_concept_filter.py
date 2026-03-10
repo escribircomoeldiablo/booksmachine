@@ -64,6 +64,23 @@ class ConceptFilterTests(unittest.TestCase):
         self.assertNotIn("assess planetary strength", filtered)
         self.assertIn("porphyry house system", filtered)
 
+    def test_filter_valid_concepts_drops_common_narrative_concept_shapes(self) -> None:
+        concepts = {
+            "relationship between first and fifth house": _payload(definitions=["d1"]),
+            "template for planetary and house delineation": _payload(definitions=["d1"]),
+            "planet in house 8 12 interpretation": _payload(definitions=["d1"]),
+            "fifth house signification in traditional astrology": _payload(definitions=["d1"]),
+            "whole sign house system": _payload(definitions=["d1"]),
+        }
+
+        filtered = filter_valid_concepts(concepts)
+
+        self.assertNotIn("relationship between first and fifth house", filtered)
+        self.assertNotIn("template for planetary and house delineation", filtered)
+        self.assertNotIn("planet in house 8 12 interpretation", filtered)
+        self.assertNotIn("fifth house signification in traditional astrology", filtered)
+        self.assertIn("whole sign house system", filtered)
+
     def test_filter_valid_concepts_drops_concepts_without_core_content(self) -> None:
         concepts = {
             "ascendant": _payload(),

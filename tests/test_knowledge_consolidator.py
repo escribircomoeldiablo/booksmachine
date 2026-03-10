@@ -4,10 +4,17 @@ import json
 import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 from src.knowledge_consolidator import (
+    _build_canonical_concepts,
+    _build_taxonomy_comparison_payload,
+    _build_taxonomy_audit_payload,
+    _build_taxonomy_output_path,
+    _export_taxonomy_audit,
     build_concept_index,
     build_concepts_output_path,
+    build_knowledge_ontology,
     consolidate_knowledge_chunks,
     export_concepts,
     load_chunk_knowledge,
@@ -136,6 +143,50 @@ class KnowledgeConsolidatorTests(unittest.TestCase):
             ["Angular houses oppose cadent houses.", "Angular triads flank angular houses."],
         )
 
+    def test_merge_concept_knowledge_projects_chunk_payload_per_concept(self) -> None:
+        chunks = [
+            {
+                "chunk_index": 7,
+                "_normalized_concepts": ["house system", "predominator", "angular house"],
+                "_chunk_type": "glossary",
+                "_decision": "extract",
+                "definitions": [
+                    "House system: A way of dividing houses.",
+                    "Predominator: The source of life force.",
+                    "Angular houses: The strongest houses.",
+                ],
+                "technical_rules": [
+                    "Predominator depends on sect and angular houses.",
+                    "Angular houses are strongest.",
+                ],
+                "procedures": [
+                    "Determine the Predominator by assessing sect and angularity.",
+                ],
+                "terminology": ["Predominator", "Angular houses", "House system"],
+                "examples": ["Angular houses include the 1st, 4th, 7th, and 10th."],
+                "relationships": [
+                    "Predominator selection depends on angular houses.",
+                    "Different house systems assign planets differently.",
+                ],
+            }
+        ]
+
+        merged = merge_concept_knowledge(
+            {"house system": [7], "predominator": [7], "angular house": [7]},
+            chunks,
+        )
+
+        self.assertEqual(merged["house system"]["definitions"], ["House system: A way of dividing houses."])
+        self.assertEqual(merged["house system"]["relationships"], ["Different house systems assign planets differently."])
+        self.assertEqual(merged["predominator"]["definitions"], ["Predominator: The source of life force."])
+        self.assertEqual(
+            merged["predominator"]["technical_rules"],
+            ["Predominator depends on sect and angular houses."],
+        )
+        self.assertEqual(merged["angular house"]["definitions"], ["Angular houses: The strongest houses."])
+        self.assertEqual(merged["angular house"]["examples"], ["Angular houses include the 1st, 4th, 7th, and 10th."])
+        self.assertNotIn("Predominator: The source of life force.", merged["house system"]["definitions"])
+
     def test_export_and_full_consolidation_write_expected_json(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:
             base = Path(tmpdir)
@@ -195,11 +246,61 @@ class KnowledgeConsolidatorTests(unittest.TestCase):
                 output_path,
                 build_concepts_output_path(str(chunks_path)),
             )
-            self.assertIn("angular house", exported)
-            self.assertEqual(exported["angular house"]["source_chunks"], [7, 8])
-            self.assertEqual(exported["succedent house"]["source_chunks"], [7])
-            self.assertEqual(exported["cadent house"]["source_chunks"], [8])
+            self.assertIn("angular houses", exported)
+            self.assertEqual(exported["angular houses"]["source_chunks"], [7, 8])
+            self.assertEqual(exported["succedent houses"]["source_chunks"], [7])
+            self.assertEqual(exported["cadent houses"]["source_chunks"], [8])
             self.assertNotIn("angularity of house as source of dynamic cosmic energy and stable support", exported)
+
+    def test_full_consolidation_applies_post_filter_canonicalization(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            base = Path(tmpdir)
+            chunks_path = base / "Ancient Astrology - Vol 2_knowledge_chunks.jsonl"
+            audit_path = base / "Ancient Astrology - Vol 2_knowledge_audit.jsonl"
+            _write_jsonl(
+                chunks_path,
+                [
+                    {
+                        "chunk_id": "chunk_0_0_50",
+                        "concepts": ["relative angularity of house"],
+                        "definitions": ["Relative angularity measures strength by proximity to angles."],
+                        "technical_rules": [],
+                        "procedures": [],
+                        "terminology": [],
+                        "relationships": [],
+                        "examples": [],
+                        "ambiguities": [],
+                    },
+                    {
+                        "chunk_id": "chunk_1_50_100",
+                        "concepts": ["angularity of house", "Angular Houses", "chreniatistiko house"],
+                        "definitions": ["Angularity of house indicates operative strength."],
+                        "technical_rules": ["Angular houses carry the most force."],
+                        "procedures": [],
+                        "terminology": ["Chreniatistiko"],
+                        "relationships": [],
+                        "examples": [],
+                        "ambiguities": [],
+                    },
+                ],
+            )
+            _write_jsonl(
+                audit_path,
+                [
+                    {"chunk_id": "chunk_0_0_50", "chunk_index": 1, "decision": "extract"},
+                    {"chunk_id": "chunk_1_50_100", "chunk_index": 2, "decision": "extract"},
+                ],
+            )
+
+            output_path = consolidate_knowledge_chunks(str(chunks_path))
+            exported = json.loads(Path(output_path).read_text(encoding="utf-8"))
+
+            self.assertIn("house angularity", exported)
+            self.assertEqual(exported["house angularity"]["source_chunks"], [1, 2])
+            self.assertIn("angular houses", exported)
+            self.assertIn("chrematistikos", exported)
+            self.assertNotIn("relative angularity of house", exported)
+            self.assertNotIn("chreniatistiko house", exported)
 
     def test_export_concepts_writes_json_file(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -207,6 +308,408 @@ class KnowledgeConsolidatorTests(unittest.TestCase):
             export_concepts({"angular house": {"concept": "angular house", "source_chunks": [7]}}, str(output_path))
             written = json.loads(output_path.read_text(encoding="utf-8"))
             self.assertEqual(written["angular house"]["concept"], "angular house")
+
+    def test_build_taxonomy_output_path_uses_stable_naming(self) -> None:
+        self.assertTrue(
+            _build_taxonomy_output_path("outputs/Book_knowledge_chunks.jsonl").endswith(
+                "Book_knowledge_taxonomy.json"
+            )
+        )
+
+    def test_taxonomy_audit_payload_is_minimal_and_uses_canonical_builder(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            base = Path(tmpdir)
+            chunks_path = base / "Ancient Astrology - Vol 2_knowledge_chunks.jsonl"
+            audit_path = base / "Ancient Astrology - Vol 2_knowledge_audit.jsonl"
+            _write_jsonl(
+                chunks_path,
+                [
+                    {
+                        "chunk_id": "chunk_7_0_100",
+                        "concepts": ["Angularity of house"],
+                        "definitions": [
+                            "Angular houses: the strongest houses.",
+                            "Succedent houses: houses following angular houses.",
+                            "Cadent houses: houses declining from angular houses.",
+                        ],
+                        "technical_rules": [],
+                        "procedures": [],
+                        "terminology": [],
+                        "relationships": [],
+                        "examples": [],
+                        "ambiguities": [],
+                    }
+                ],
+            )
+            _write_jsonl(
+                audit_path,
+                [{"chunk_id": "chunk_7_0_100", "chunk_index": 8, "decision": "extract"}],
+            )
+
+            canonical = _build_canonical_concepts(str(chunks_path))
+            audit_payload = _build_taxonomy_audit_payload(str(chunks_path))
+
+            self.assertEqual(set(audit_payload), {"links"})
+            self.assertIn("house angularity", canonical)
+            self.assertEqual(
+                [(link["parent"], link["child"]) for link in audit_payload["links"]],
+                [
+                    ("house angularity", "angular houses"),
+                    ("house angularity", "cadent houses"),
+                    ("house angularity", "succedent houses"),
+                ],
+            )
+
+    def test_export_taxonomy_audit_writes_minimal_json_file(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            output_path = Path(tmpdir) / "Book_knowledge_taxonomy.json"
+            payload = {
+                "links": [
+                    {
+                        "parent": "angularity of house",
+                        "child": "angular houses",
+                        "signals": ["definition_head"],
+                        "evidence": ["Angular houses: the strongest houses."],
+                        "source_chunks": [7],
+                    }
+                ]
+            }
+
+            _export_taxonomy_audit(payload, str(output_path))
+            written = json.loads(output_path.read_text(encoding="utf-8"))
+
+            self.assertEqual(written, payload)
+
+    def test_taxonomy_comparison_payload_shows_when_inference_already_covers_legacy_case(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            base = Path(tmpdir)
+            chunks_path = base / "Ancient Astrology - Vol 2_knowledge_chunks.jsonl"
+            audit_path = base / "Ancient Astrology - Vol 2_knowledge_audit.jsonl"
+            _write_jsonl(
+                chunks_path,
+                [
+                    {
+                        "chunk_id": "chunk_7_0_100",
+                        "concepts": ["Angularity of house"],
+                        "definitions": [
+                            "Angular houses: the strongest houses.",
+                            "Succedent houses: houses following angular houses.",
+                            "Cadent houses: houses declining from angular houses.",
+                        ],
+                        "technical_rules": [],
+                        "procedures": [],
+                        "terminology": [],
+                        "relationships": [],
+                        "examples": [],
+                        "ambiguities": [],
+                    }
+                ],
+            )
+            _write_jsonl(
+                audit_path,
+                [{"chunk_id": "chunk_7_0_100", "chunk_index": 8, "decision": "extract"}],
+            )
+
+            comparison = _build_taxonomy_comparison_payload(str(chunks_path))
+
+            self.assertEqual(
+                comparison["inferred_only_edges"],
+                comparison["inferred_plus_legacy_edges"],
+            )
+            self.assertEqual(comparison["legacy_only_edges"], [])
+
+    def test_taxonomy_comparison_payload_isolates_legacy_only_edges(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            base = Path(tmpdir)
+            chunks_path = base / "Ancient Astrology - Vol 2_knowledge_chunks.jsonl"
+            audit_path = base / "Ancient Astrology - Vol 2_knowledge_audit.jsonl"
+            _write_jsonl(
+                chunks_path,
+                [
+                    {
+                        "chunk_id": "chunk_5_0_100",
+                        "concepts": ["Angular Houses", "Succedent houses", "Cadent houses"],
+                        "definitions": [],
+                        "technical_rules": ["Angular houses are strong."],
+                        "procedures": [],
+                        "terminology": [],
+                        "relationships": [],
+                        "examples": [],
+                        "ambiguities": [],
+                    }
+                ],
+            )
+            _write_jsonl(
+                audit_path,
+                [{"chunk_id": "chunk_5_0_100", "chunk_index": 6, "decision": "extract"}],
+            )
+
+            comparison = _build_taxonomy_comparison_payload(str(chunks_path))
+
+            self.assertEqual(comparison["links"], [])
+            self.assertEqual(comparison["inferred_only_edges"], [])
+            self.assertEqual(
+                comparison["legacy_only_edges"],
+                [
+                    {"parent": "house angularity", "child": "angular houses"},
+                    {"parent": "house angularity", "child": "succedent houses"},
+                    {"parent": "house angularity", "child": "cadent houses"},
+                ],
+            )
+
+    def test_build_knowledge_ontology_writes_new_artifact_without_changing_concepts_flow(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            base = Path(tmpdir)
+            chunks_path = base / "Ancient Astrology - Vol 2_knowledge_chunks.jsonl"
+            audit_path = base / "Ancient Astrology - Vol 2_knowledge_audit.jsonl"
+            _write_jsonl(
+                chunks_path,
+                [
+                    {
+                        "chunk_id": "chunk_5_0_100",
+                        "concepts": ["Whole sign house system", "Angular Houses", "chreniatistiko house"],
+                        "definitions": ["Whole sign houses align signs with houses."],
+                        "technical_rules": ["Angular houses are strong."],
+                        "procedures": ["Assign one sign per house."],
+                        "terminology": ["Whole-sign houses"],
+                        "relationships": ["Angular houses are followed by succedent houses."],
+                        "examples": [],
+                        "ambiguities": [],
+                    },
+                    {
+                        "chunk_id": "chunk_6_100_200",
+                        "concepts": ["whole sign houses", "Succedent houses", "Cadent houses"],
+                        "definitions": ["Succedent houses have moderate strength."],
+                        "technical_rules": ["Cadent houses are weaker."],
+                        "procedures": ["Classify 2, 5, 8, and 11 as succedent."],
+                        "terminology": ["Cadent houses"],
+                        "relationships": [],
+                        "examples": [],
+                        "ambiguities": [],
+                    },
+                ],
+            )
+            _write_jsonl(
+                audit_path,
+                [
+                    {"chunk_id": "chunk_5_0_100", "chunk_index": 6, "decision": "extract"},
+                    {"chunk_id": "chunk_6_100_200", "chunk_index": 7, "decision": "extract"},
+                ],
+            )
+
+            concepts_output_path = consolidate_knowledge_chunks(str(chunks_path))
+            ontology_output_path = build_knowledge_ontology(str(chunks_path))
+            concepts_exported = json.loads(Path(concepts_output_path).read_text(encoding="utf-8"))
+            ontology_exported = json.loads(Path(ontology_output_path).read_text(encoding="utf-8"))
+
+            self.assertTrue(concepts_output_path.endswith("_knowledge_concepts.json"))
+            self.assertTrue(ontology_output_path.endswith("_knowledge_ontology.json"))
+            self.assertIn("angular houses", concepts_exported)
+            self.assertIn("whole sign house system", concepts_exported)
+            self.assertIn("house angularity", ontology_exported)
+            self.assertEqual(
+                ontology_exported["house angularity"]["child_concepts"],
+                ["angular houses", "succedent houses", "cadent houses"],
+            )
+            self.assertEqual(ontology_exported["angular houses"]["parent_concepts"], ["house angularity"])
+            self.assertIn("chrematistikos", ontology_exported)
+            self.assertEqual(ontology_exported["chrematistikos"]["related_concepts"], ["house angularity"])
+            self.assertIn("whole sign house system", ontology_exported)
+            self.assertEqual(ontology_exported["whole sign house system"]["aliases"], [])
+
+    def test_build_knowledge_ontology_keeps_legacy_behavior_when_inferred_taxonomy_flag_is_off(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            base = Path(tmpdir)
+            chunks_path = base / "Ancient Astrology - Vol 2_knowledge_chunks.jsonl"
+            audit_path = base / "Ancient Astrology - Vol 2_knowledge_audit.jsonl"
+            _write_jsonl(
+                chunks_path,
+                [
+                    {
+                        "chunk_id": "chunk_5_0_100",
+                        "concepts": ["Angularity of house", "Angular Houses", "Succedent houses", "Cadent houses"],
+                        "definitions": [
+                            "Angular houses: strong houses.",
+                            "Succedent houses: houses following angular houses.",
+                            "Cadent houses: houses declining from angular houses.",
+                        ],
+                        "technical_rules": ["Angular houses are strong."],
+                        "procedures": [],
+                        "terminology": [],
+                        "relationships": [],
+                        "examples": [],
+                        "ambiguities": [],
+                    }
+                ],
+            )
+            _write_jsonl(
+                audit_path,
+                [{"chunk_id": "chunk_5_0_100", "chunk_index": 6, "decision": "extract"}],
+            )
+
+            with patch("src.knowledge_consolidator.ONTOLOGY_ENABLE_INFERRED_TAXONOMY", False):
+                ontology_output_path = build_knowledge_ontology(str(chunks_path))
+
+            ontology_exported = json.loads(Path(ontology_output_path).read_text(encoding="utf-8"))
+            self.assertIn("house angularity", ontology_exported)
+            self.assertEqual(
+                ontology_exported["house angularity"]["child_concepts"],
+                ["angular houses", "succedent houses", "cadent houses"],
+            )
+
+    def test_build_knowledge_ontology_can_consume_inferred_taxonomy_without_changing_concepts_artifact(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            base = Path(tmpdir)
+            chunks_path = base / "Ancient Astrology - Vol 2_knowledge_chunks.jsonl"
+            audit_path = base / "Ancient Astrology - Vol 2_knowledge_audit.jsonl"
+            _write_jsonl(
+                chunks_path,
+                [
+                    {
+                        "chunk_id": "chunk_5_0_100",
+                        "concepts": ["Angularity of house", "Angular Houses", "Succedent houses", "Cadent houses"],
+                        "definitions": [
+                            "Angular houses: strong houses.",
+                            "Succedent houses: houses following angular houses.",
+                            "Cadent houses: houses declining from angular houses.",
+                        ],
+                        "technical_rules": ["Angular houses are strong."],
+                        "procedures": [],
+                        "terminology": [],
+                        "relationships": [],
+                        "examples": [],
+                        "ambiguities": [],
+                    }
+                ],
+            )
+            _write_jsonl(
+                audit_path,
+                [{"chunk_id": "chunk_5_0_100", "chunk_index": 6, "decision": "extract"}],
+            )
+
+            concepts_output_path = consolidate_knowledge_chunks(str(chunks_path))
+            concepts_exported = json.loads(Path(concepts_output_path).read_text(encoding="utf-8"))
+
+            with patch("src.knowledge_consolidator.ONTOLOGY_ENABLE_INFERRED_TAXONOMY", True):
+                ontology_output_path = build_knowledge_ontology(str(chunks_path))
+
+            ontology_exported = json.loads(Path(ontology_output_path).read_text(encoding="utf-8"))
+
+            self.assertIn("house angularity", concepts_exported)
+            self.assertIn("house angularity", ontology_exported)
+            self.assertEqual(
+                ontology_exported["house angularity"]["child_concepts"],
+                ["angular houses", "succedent houses", "cadent houses"],
+            )
+            self.assertEqual(ontology_exported["house angularity"]["aliases"], [])
+
+    def test_consolidation_promotes_taxonomy_subconcepts_into_independent_keys(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            base = Path(tmpdir)
+            chunks_path = base / "Ancient Astrology - Vol 2_knowledge_chunks.jsonl"
+            audit_path = base / "Ancient Astrology - Vol 2_knowledge_audit.jsonl"
+            _write_jsonl(
+                chunks_path,
+                [
+                    {
+                        "chunk_id": "chunk_7_0_100",
+                        "concepts": ["Angularity of houses as source of dynamic cosmic energy and stable support"],
+                        "definitions": [
+                            "Succedent houses: houses following angular houses with moderate energy.",
+                            "Cadent houses: houses following succedent houses and declining from power.",
+                        ],
+                        "technical_rules": [
+                            "The Greek epanaphora means to rise toward the angular house.",
+                            "The Greek apoklino means to slope down from the angular house.",
+                        ],
+                        "procedures": [],
+                        "terminology": ["Epanaphora", "Apoklino"],
+                        "relationships": [],
+                        "examples": [],
+                        "ambiguities": [],
+                    },
+                    {
+                        "chunk_id": "chunk_8_100_200",
+                        "concepts": ["Relative favorability of houses"],
+                        "definitions": ["Benefic houses: houses favorable to the life of the individual."],
+                        "technical_rules": [],
+                        "procedures": [],
+                        "terminology": [],
+                        "relationships": [
+                            "Benefic houses include angular, 11th, 9th, and 5th; malefic houses include 2nd, 6th, 8th, and 12th."
+                        ],
+                        "examples": [],
+                        "ambiguities": [],
+                    },
+                ],
+            )
+            _write_jsonl(
+                audit_path,
+                [
+                    {"chunk_id": "chunk_7_0_100", "chunk_index": 8, "decision": "extract"},
+                    {"chunk_id": "chunk_8_100_200", "chunk_index": 9, "decision": "extract"},
+                ],
+            )
+
+            output_path = consolidate_knowledge_chunks(str(chunks_path))
+            exported = json.loads(Path(output_path).read_text(encoding="utf-8"))
+
+            self.assertIn("succedent houses", exported)
+            self.assertIn("cadent houses", exported)
+            self.assertIn("epanaphora", exported)
+            self.assertIn("apoklino", exported)
+            self.assertIn("benefic houses", exported)
+            self.assertIn("malefic houses", exported)
+            self.assertIn("favorability of house", exported)
+            self.assertEqual(exported["epanaphora"]["terminology"], ["Epanaphora"])
+            self.assertEqual(exported["apoklino"]["terminology"], ["Apoklino"])
+            self.assertEqual(
+                exported["malefic houses"]["relationships"],
+                [
+                    "Benefic houses include angular, 11th, 9th, and 5th; malefic houses include 2nd, 6th, 8th, and 12th."
+                ],
+            )
+
+    def test_consolidation_preserves_structural_parent_house_angularity(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            base = Path(tmpdir)
+            chunks_path = base / "Ancient Astrology - Vol 2_knowledge_chunks.jsonl"
+            audit_path = base / "Ancient Astrology - Vol 2_knowledge_audit.jsonl"
+            _write_jsonl(
+                chunks_path,
+                [
+                    {
+                        "chunk_id": "chunk_50_0_100",
+                        "concepts": ["Planetary condition"],
+                        "definitions": [
+                            "House Angularity: angular houses (1,4,7,10) offer dynamic strength and stability to residing planets.",
+                            "Angular houses: the strongest houses.",
+                            "Cadent houses: the weakest houses.",
+                        ],
+                        "technical_rules": [
+                            "Angular houses, succedent houses, and cadent houses form a strength hierarchy."
+                        ],
+                        "procedures": [],
+                        "terminology": ["Succedent Houses"],
+                        "relationships": [],
+                        "examples": [],
+                        "ambiguities": [],
+                    }
+                ],
+            )
+            _write_jsonl(
+                audit_path,
+                [{"chunk_id": "chunk_50_0_100", "chunk_index": 51, "decision": "extract"}],
+            )
+
+            output_path = consolidate_knowledge_chunks(str(chunks_path))
+            exported = json.loads(Path(output_path).read_text(encoding="utf-8"))
+
+            self.assertIn("house angularity", exported)
+            self.assertEqual(exported["house angularity"]["source_chunks"], [51])
+            self.assertIn("angular houses", exported)
+            self.assertIn("succedent houses", exported)
+            self.assertIn("cadent houses", exported)
 
 
 if __name__ == "__main__":

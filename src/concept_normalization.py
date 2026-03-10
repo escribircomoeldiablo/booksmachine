@@ -7,6 +7,18 @@ import re
 _RE_NON_ALNUM_SPACE = re.compile(r"[^a-z0-9\s]")
 _RE_MULTI_SPACE = re.compile(r"\s+")
 _RE_LEADING_ARTICLES = re.compile(r"^(?:the|a|an)\s+")
+_PROTECTED_S_SUFFIXES: tuple[str, ...] = (
+    "ous",
+    "sis",
+    "tes",
+    "kos",
+)
+_TOKEN_REPAIRS: dict[str, str] = {
+    "advantageou": "advantageous",
+    "phasi": "phasis",
+    "chrematistiko": "chrematistikos",
+    "oikodespote": "oikodespotes",
+}
 
 
 def _singularize_token(token: str) -> str:
@@ -16,6 +28,8 @@ def _singularize_token(token: str) -> str:
         return token[:-1]  # houses -> house
     if token.endswith("systems"):
         return token[:-1]  # systems -> system
+    if token.endswith(_PROTECTED_S_SUFFIXES):
+        return token
     if token.endswith("sses"):
         return token
     if token.endswith("s"):
@@ -83,7 +97,7 @@ def normalize_concept_name(concept: str) -> str:
     normalized = _strip_leading_articles(normalized)
     normalized = _canonicalize_discursive_phrase(normalized)
     tokens = [_singularize_token(token) for token in normalized.split()]
-    normalized = " ".join(tokens)
+    normalized = " ".join(_TOKEN_REPAIRS.get(token, token) for token in tokens)
     normalized = _RE_MULTI_SPACE.sub(" ", normalized).strip()
     return _normalize_whole_sign_variants(normalized)
 

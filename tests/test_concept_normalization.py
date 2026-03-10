@@ -12,6 +12,10 @@ class ConceptNormalizationTests(unittest.TestCase):
         self.assertEqual(normalize_concept_name("Whole sign system"), "whole sign house system")
         self.assertEqual(normalize_concept_name("Angular Houses"), "angular house")
         self.assertEqual(normalize_concept_name("The Astrological Houses"), "astrological house")
+        self.assertEqual(normalize_concept_name("Advantageous"), "advantageous")
+        self.assertEqual(normalize_concept_name("Phasis"), "phasis")
+        self.assertEqual(normalize_concept_name("Chrematistikos"), "chrematistikos")
+        self.assertEqual(normalize_concept_name("Oikodespotes"), "oikodespotes")
 
     def test_normalize_concept_name_canonicalizes_discursive_patterns(self) -> None:
         self.assertEqual(normalize_concept_name("classification of house"), "house classification")
