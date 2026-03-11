@@ -11,6 +11,9 @@ from typing import Callable
 from .chunker import split_into_chunks
 from .chunker_structural import build_structural_chunks
 from .compiler import (
+    build_argument_audit_output_path,
+    build_argument_chunks_output_path,
+    build_argument_map_output_path,
     build_block_output_path,
     build_chunk_output_path,
     build_front_matter_outline_output_path,
@@ -21,6 +24,12 @@ from .compiler import (
     compile_chunk_summaries,
     compile_compendium,
 )
+from .argument_consolidator import build_argument_map
+from .argument_extractor import extract_argument_chunk, get_argument_prompt_hash
+from .argument_render import render_argument_block_input, render_argument_chunk_summary
+from .argument_schema import ARGUMENT_CHUNK_SCHEMA_VERSION, ArgumentChunkV1
+from .argument_parser import validate_argument_chunk_record
+from .book_profile import get_book_profile
 from .config import (
     CHUNK_OVERLAP,
     CHUNK_SIZE,
@@ -58,7 +67,11 @@ from .config import (
 from .front_matter_extractor import collect_front_matter_input, extract_front_matter_outline
 from .front_matter_schema import FrontMatterOutlineV1, make_empty_front_matter_outline
 from .document_map_cleaner import clean_document_map
-from .knowledge_extractor import chunk_knowledge_to_summary_text, extract_chunk_knowledge
+from .knowledge_extractor import (
+    chunk_knowledge_to_summary_text,
+    extract_chunk_knowledge,
+    get_chunk_knowledge_prompt_hash,
+)
 from .knowledge_normalize import (
     CORE_FIELDS,
     SEMANTIC_FIELDS,
@@ -92,6 +105,7 @@ from .utils import ensure_dir, save_text
 CHECKPOINT_DIR_NAME = ".checkpoints"
 CHECKPOINT_NAMESPACE_SUMMARY = "summary"
 CHECKPOINT_NAMESPACE_KNOWLEDGE = "knowledge"
+CHECKPOINT_NAMESPACE_ARGUMENTATIVE = "argumentative"
 DEFAULT_SMOKE_MAX_CHUNKS = 3
 ProgressCallback = Callable[[str, str, dict[str, object]], None]
 FALLBACK_REASON_SEMANTIC_UNKNOWN_RATIO = "semantic_gate_unknown_ratio"
@@ -349,6 +363,63 @@ def _load_checkpointed_knowledge(
     return cached
 
 
+def _load_checkpointed_arguments(
+    checkpoint_root: Path,
+    total_chunks: int,
+) -> dict[int, ArgumentChunkV1]:
+    cached: dict[int, ArgumentChunkV1] = {}
+    for chunk_index in range(1, total_chunks + 1):
+        chunk_path = _knowledge_checkpoint_path(checkpoint_root, chunk_index)
+        if not chunk_path.exists():
+            continue
+        try:
+            payload = json.loads(chunk_path.read_text(encoding="utf-8"))
+            if not isinstance(payload, dict):
+                continue
+            section_refs = payload.get("section_refs", [])
+            refs: list[SectionRef] = []
+            if isinstance(section_refs, list):
+                for item in section_refs:
+                    if not isinstance(item, dict):
+                        continue
+                    label = item.get("label")
+                    section_type = item.get("type")
+                    start_char = item.get("start_char")
+                    end_char = item.get("end_char")
+                    if (
+                        isinstance(label, str)
+                        and isinstance(section_type, str)
+                        and isinstance(start_char, int)
+                        and isinstance(end_char, int)
+                    ):
+                        refs.append(
+                            SectionRef(
+                                label=label,
+                                type=section_type,
+                                start_char=start_char,
+                                end_char=end_char,
+                            )
+                        )
+            schema_version = payload.get("schema_version")
+            chunk_id = payload.get("chunk_id")
+            source_fingerprint = payload.get("source_fingerprint")
+            if not (
+                isinstance(schema_version, str)
+                and isinstance(chunk_id, str)
+                and isinstance(source_fingerprint, str)
+            ):
+                continue
+            cached[chunk_index] = validate_argument_chunk_record(
+                payload,
+                chunk_id=chunk_id,
+                source_fingerprint=source_fingerprint,
+                section_refs=refs,
+            )
+        except (json.JSONDecodeError, OSError, ValueError, TypeError):
+            continue
+    return cached
+
+
 def _save_manifest(checkpoint_root: Path, payload: dict[str, object]) -> None:
     save_text(
         str(checkpoint_root / "manifest.json"),
@@ -366,14 +437,21 @@ def _chunking_fingerprint(
     split_window: int,
     output_language: str,
     knowledge_language: str,
+    profile: str,
+    schema_version: str,
+    prompt_hash: str,
 ) -> str:
     if mode == "structural":
         token = (
             f"structural:{target_size}:{min_size}:{split_window}:"
-            f"output={output_language}:knowledge={knowledge_language}"
+            f"output={output_language}:knowledge={knowledge_language}:"
+            f"profile={profile}:schema={schema_version}:prompt={prompt_hash}"
         )
     else:
-        token = f"legacy:{chunk_size}:{overlap}:output={output_language}:knowledge={knowledge_language}"
+        token = (
+            f"legacy:{chunk_size}:{overlap}:output={output_language}:knowledge={knowledge_language}:"
+            f"profile={profile}:schema={schema_version}:prompt={prompt_hash}"
+        )
     return _sha256_text(token)
 
 
@@ -783,6 +861,51 @@ def _is_garbage_label(label: str) -> bool:
     return False
 
 
+def _argument_has_substantive_content(record: ArgumentChunkV1) -> bool:
+    return any(
+        (
+            record.theses,
+            record.claims,
+            record.evidence,
+            record.methods,
+            record.debates,
+            record.limitations,
+        )
+    )
+
+
+def _argument_empty_fields(record: ArgumentChunkV1) -> list[str]:
+    fields = (
+        "theses",
+        "claims",
+        "evidence",
+        "methods",
+        "authors_or_schools",
+        "key_terms",
+        "debates",
+        "limitations",
+    )
+    return [field_name for field_name in fields if not getattr(record, field_name)]
+
+
+def _argument_decision_for_result(
+    record: ArgumentChunkV1,
+    *,
+    used_fallback: bool,
+    llm_response_present: bool,
+    error_kind: str | None,
+) -> str:
+    if not llm_response_present:
+        return "llm_empty"
+    if used_fallback:
+        if error_kind == "invalid_payload":
+            return "invalid_payload"
+        return "parse_fallback"
+    if _argument_has_substantive_content(record):
+        return "ok"
+    return "empty_legitimate"
+
+
 def _chunk_id_for_index(
     *,
     chunk_index: int,
@@ -808,6 +931,7 @@ def process_book(
     knowledge_language: str = "original",
     output_folder: str | None = None,
     front_matter_outline_enabled: bool | None = None,
+    profile: str = "manual",
     progress_callback: ProgressCallback | None = None,
 ) -> str:
     """Process a book file and save an aggregated technical summary."""
@@ -819,6 +943,7 @@ def process_book(
         raise ValueError("output_language must be either 'es' or 'original'")
     if knowledge_language not in {"es", "original"}:
         raise ValueError("knowledge_language must be either 'es' or 'original'")
+    book_profile = get_book_profile(profile)
 
     source_path = Path(path)
     book_title = source_path.stem
@@ -900,7 +1025,13 @@ def process_book(
             )
             _log(verbose, f"Front matter outline error: {exc}")
     _emit_progress(progress_callback, "chunking", "Dividiendo documento en chunks")
-    processing_mode = "knowledge_extraction" if KNOWLEDGE_EXTRACTION_ENABLED else "summary"
+    argument_mode_active = book_profile.structured_artifact_family == "argument"
+    knowledge_mode_active = (not argument_mode_active) and KNOWLEDGE_EXTRACTION_ENABLED
+    processing_mode = (
+        "argumentative_extraction"
+        if argument_mode_active
+        else ("knowledge_extraction" if knowledge_mode_active else "summary")
+    )
     chunking_mode = "legacy"
     chunking_target_size = CHUNK_SIZE
     chunking_min_size = 0
@@ -993,7 +1124,20 @@ def process_book(
     block_output_path = build_block_output_path(str(source_path), effective_output_folder)
     knowledge_output_path = build_knowledge_chunks_output_path(str(source_path), effective_output_folder)
     knowledge_audit_output_path = build_knowledge_audit_output_path(str(source_path), effective_output_folder)
+    argument_output_path = build_argument_chunks_output_path(str(source_path), effective_output_folder)
+    argument_audit_output_path = build_argument_audit_output_path(str(source_path), effective_output_folder)
+    argument_map_output_path = build_argument_map_output_path(str(source_path), effective_output_folder)
     total_chunks_detected = len(chunks)
+    extraction_schema_version = (
+        ARGUMENT_CHUNK_SCHEMA_VERSION
+        if argument_mode_active
+        else ("2.0.0" if knowledge_mode_active else "summary_v1")
+    )
+    extraction_prompt_hash = (
+        get_argument_prompt_hash()
+        if argument_mode_active
+        else (get_chunk_knowledge_prompt_hash() if knowledge_mode_active else _sha256_text("summary_prompt_v1"))
+    )
     chunking_hash = _chunking_fingerprint(
         mode=chunking_mode,
         chunk_size=CHUNK_SIZE,
@@ -1003,9 +1147,14 @@ def process_book(
         split_window=chunking_split_window,
         output_language=output_language,
         knowledge_language=knowledge_language,
+        profile=book_profile.profile_name,
+        schema_version=extraction_schema_version,
+        prompt_hash=extraction_prompt_hash,
     )
     checkpoint_namespace = (
-        CHECKPOINT_NAMESPACE_KNOWLEDGE if KNOWLEDGE_EXTRACTION_ENABLED else CHECKPOINT_NAMESPACE_SUMMARY
+        CHECKPOINT_NAMESPACE_ARGUMENTATIVE
+        if argument_mode_active
+        else (CHECKPOINT_NAMESPACE_KNOWLEDGE if knowledge_mode_active else CHECKPOINT_NAMESPACE_SUMMARY)
     )
     checkpoint_root = _checkpoint_root(
         effective_output_folder,
@@ -1016,8 +1165,15 @@ def process_book(
 
     cached_summaries: dict[int, str] = {}
     cached_knowledge: dict[int, ChunkKnowledgeV1] = {}
+    cached_arguments: dict[int, ArgumentChunkV1] = {}
     if resume:
-        if KNOWLEDGE_EXTRACTION_ENABLED:
+        if argument_mode_active:
+            cached_arguments = _load_checkpointed_arguments(checkpoint_root, total_chunks_detected)
+            cached_summaries = {
+                idx: render_argument_chunk_summary(record, output_language=output_language)
+                for idx, record in cached_arguments.items()
+            }
+        elif knowledge_mode_active:
             cached_knowledge = _load_checkpointed_knowledge(checkpoint_root, total_chunks_detected)
             cached_summaries = {
                 idx: chunk_knowledge_to_summary_text(record, output_language=output_language)
@@ -1085,7 +1241,9 @@ def process_book(
     chunk_llm_calls_made = 0
     summaries_by_index = dict(cached_summaries)
     knowledge_records_by_index = dict(cached_knowledge)
+    argument_records_by_index = dict(cached_arguments)
     knowledge_parse_failures = 0
+    argument_parse_failures = 0
     precheck_decision_counts = {
         DECISION_EXTRACT: 0,
         DECISION_EXTRACT_DEGRADED: 0,
@@ -1107,6 +1265,7 @@ def process_book(
     core_doctrine_pre_clamp_by_index: dict[int, bool] = {}
     clamp_actions_by_index: dict[int, list[str]] = {}
     semantic_filter_actions_by_index: dict[int, list[str]] = {}
+    argument_audit_rows_by_index: dict[int, dict[str, object]] = {}
     for run_position, chunk_index in enumerate(planned_new_indices, start=1):
         _log(
             verbose,
@@ -1120,7 +1279,57 @@ def process_book(
             total_new_chunks=len(planned_new_indices),
             chunk_index=chunk_index,
         )
-        if KNOWLEDGE_EXTRACTION_ENABLED:
+        if argument_mode_active:
+            chunk_id = _chunk_id_for_index(
+                chunk_index=chunk_index,
+                chunking_mode=chunking_mode,
+                structural_chunk_records=structural_chunk_records,
+            )
+            section_refs = _build_section_refs_for_chunk(
+                chunk_index=chunk_index,
+                chunking_mode=chunking_mode,
+                structural_chunk_records=structural_chunk_records,
+                structure_map=structure_map,
+            )
+            extraction = extract_argument_chunk(
+                chunk_text=chunks[chunk_index - 1],
+                chunk_id=chunk_id,
+                source_fingerprint=book_hash,
+                section_refs=section_refs,
+                knowledge_language=knowledge_language,
+            )
+            record = extraction.record
+            argument_records_by_index[chunk_index] = record
+            if extraction.used_fallback and extraction.error_kind != "llm_empty":
+                argument_parse_failures += 1
+                _log(verbose, f"[Chunk {chunk_index}] Argument parse fallback: {extraction.parse_error}")
+            decision = _argument_decision_for_result(
+                record,
+                used_fallback=extraction.used_fallback,
+                llm_response_present=extraction.llm_response_present,
+                error_kind=extraction.error_kind,
+            )
+            argument_audit_rows_by_index[chunk_index] = {
+                "chunk_index": chunk_index,
+                "chunk_id": record.chunk_id,
+                "decision": decision,
+                "parse_error": extraction.parse_error,
+                "used_fallback": extraction.used_fallback,
+                "llm_response_present": extraction.llm_response_present,
+                "has_substantive_content": _argument_has_substantive_content(record),
+                "empty_fields": _argument_empty_fields(record),
+                "theses_count": len(record.theses),
+                "claims_count": len(record.claims),
+                "evidence_count": len(record.evidence),
+                "methods_count": len(record.methods),
+                "authors_or_schools_count": len(record.authors_or_schools),
+                "key_terms_count": len(record.key_terms),
+                "debates_count": len(record.debates),
+                "limitations_count": len(record.limitations),
+            }
+            chunk_summary = render_argument_chunk_summary(record, output_language=output_language)
+            chunk_llm_calls_made += 1
+        elif knowledge_mode_active:
             chunk_id = _chunk_id_for_index(
                 chunk_index=chunk_index,
                 chunking_mode=chunking_mode,
@@ -1229,7 +1438,12 @@ def process_book(
 
         if resume:
             ensure_dir(str(checkpoint_root))
-            if KNOWLEDGE_EXTRACTION_ENABLED:
+            if argument_mode_active:
+                save_text(
+                    str(_knowledge_checkpoint_path(checkpoint_root, chunk_index)),
+                    json.dumps(argument_records_by_index[chunk_index].to_dict(), ensure_ascii=False),
+                )
+            elif knowledge_mode_active:
                 save_text(
                     str(_knowledge_checkpoint_path(checkpoint_root, chunk_index)),
                     json.dumps(knowledge_records_by_index[chunk_index].to_dict(), ensure_ascii=False),
@@ -1277,14 +1491,19 @@ def process_book(
                 "fallback_reason": fallback_reason,
                 "excluded_section_types_active": excluded_section_types_active,
                 "excluded_sections_count": excluded_sections_count,
-                "knowledge_parse_failures": knowledge_parse_failures if KNOWLEDGE_EXTRACTION_ENABLED else 0,
-                "knowledge_precheck_enabled": KNOWLEDGE_PRECHECK_ENABLED,
+                "profile": book_profile.profile_name,
+                "structured_artifact_family": book_profile.structured_artifact_family,
+                "chunk_schema_version": extraction_schema_version,
+                "extraction_prompt_hash": extraction_prompt_hash,
+                "knowledge_parse_failures": knowledge_parse_failures if knowledge_mode_active else 0,
+                "argument_parse_failures": argument_parse_failures if argument_mode_active else 0,
+                "knowledge_precheck_enabled": KNOWLEDGE_PRECHECK_ENABLED if knowledge_mode_active else False,
                 "knowledge_precheck_review_default": KNOWLEDGE_PRECHECK_REVIEW_DEFAULT,
                 "knowledge_precheck_decision_counts": (
-                    precheck_decision_counts if KNOWLEDGE_EXTRACTION_ENABLED else None
+                    precheck_decision_counts if knowledge_mode_active else None
                 ),
                 "knowledge_precheck_reason_counts": (
-                    dict(sorted(precheck_reason_counts.items())) if KNOWLEDGE_EXTRACTION_ENABLED else None
+                    dict(sorted(precheck_reason_counts.items())) if knowledge_mode_active else None
                 ),
                 "front_matter_outline_enabled": front_matter_outline_active,
                 "front_matter_outline_output_path": (
@@ -1300,177 +1519,213 @@ def process_book(
         for index in selected_indices
         if index in knowledge_records_by_index
     ]
+    ordered_argument_records = [
+        argument_records_by_index[index]
+        for index in selected_indices
+        if index in argument_records_by_index
+    ]
     chunks_really_processed = len(ordered_summaries)
     knowledge_chunks_generated = len(ordered_knowledge_records)
-    valid_chunk_knowledge_count = max(0, knowledge_chunks_generated - knowledge_parse_failures)
-    total_concepts = sum(len(record.concepts) for record in ordered_knowledge_records)
-    total_rules = sum(len(record.technical_rules) for record in ordered_knowledge_records)
-    total_definitions = sum(len(record.definitions) for record in ordered_knowledge_records)
-    chunks_with_terminology = sum(1 for record in ordered_knowledge_records if len(record.terminology) > 0)
-    chunks_with_technical_rule = sum(1 for record in ordered_knowledge_records if len(record.technical_rules) > 0)
-    total_knowledge_items = sum(
-        len(record.concepts)
-        + len(record.definitions)
-        + len(record.technical_rules)
-        + len(record.procedures)
-        + len(record.terminology)
-        for record in ordered_knowledge_records
-    )
-    avg_concepts_per_chunk = _float_ratio(total_concepts, max(1, knowledge_chunks_generated))
-    avg_rules_per_chunk = _float_ratio(total_rules, max(1, knowledge_chunks_generated))
-    avg_definitions_per_chunk = _float_ratio(total_definitions, max(1, knowledge_chunks_generated))
-    chunk_terminology_ratio = _float_ratio(chunks_with_terminology, max(1, knowledge_chunks_generated))
-    chunk_rule_ratio = _float_ratio(chunks_with_technical_rule, max(1, knowledge_chunks_generated))
-    knowledge_avg_items_per_chunk = _float_ratio(total_knowledge_items, max(1, knowledge_chunks_generated))
+    valid_chunk_knowledge_count = 0
+    total_concepts = 0
+    total_rules = 0
+    total_definitions = 0
+    chunks_with_terminology = 0
+    chunks_with_technical_rule = 0
+    total_knowledge_items = 0
+    avg_concepts_per_chunk = 0.0
+    avg_rules_per_chunk = 0.0
+    avg_definitions_per_chunk = 0.0
+    chunk_terminology_ratio = 0.0
+    chunk_rule_ratio = 0.0
+    knowledge_avg_items_per_chunk = 0.0
 
     def _decision_state_for_index(index: int) -> str:
         return policy_decision_by_index.get(index, precheck_applied_by_index.get(index, DECISION_EXTRACT))
 
-    extracted_chunk_count = sum(
-        1
-        for index in selected_indices
-        if (
-            index in knowledge_records_by_index
-            and _decision_state_for_index(index) in {DECISION_EXTRACT, DECISION_EXTRACT_DEGRADED}
-        )
-    )
-    extracted_knowledge_records = [
-        knowledge_records_by_index[index]
-        for index in selected_indices
-        if (
-            index in knowledge_records_by_index
-            and _decision_state_for_index(index) in {DECISION_EXTRACT, DECISION_EXTRACT_DEGRADED}
-        )
-    ]
-    skipped_chunk_count = sum(
-        1
-        for index in selected_indices
-        if _decision_state_for_index(index) == DECISION_SKIP
-    )
-    extract_degraded_count = sum(
-        1
-        for index in selected_indices
-        if _decision_state_for_index(index) == DECISION_EXTRACT_DEGRADED
-    )
+    extracted_chunk_count = 0
+    extracted_knowledge_records: list[ChunkKnowledgeV1] = []
+    skipped_chunk_count = 0
+    extract_degraded_count = 0
     decision_state_counts = {
-        DECISION_EXTRACT: sum(1 for index in selected_indices if _decision_state_for_index(index) == DECISION_EXTRACT),
-        DECISION_EXTRACT_DEGRADED: sum(
-            1 for index in selected_indices if _decision_state_for_index(index) == DECISION_EXTRACT_DEGRADED
-        ),
-        DECISION_SKIP: sum(1 for index in selected_indices if _decision_state_for_index(index) == DECISION_SKIP),
+        DECISION_EXTRACT: 0,
+        DECISION_EXTRACT_DEGRADED: 0,
+        DECISION_SKIP: 0,
     }
-    extract_strong_count = sum(
-        1
-        for index in selected_indices
-        if _decision_state_for_index(index) == DECISION_EXTRACT
-        and doctrinal_support_level_by_index.get(index, "none") == "strong"
-    )
-    extract_minimal_count = sum(
-        1
-        for index in selected_indices
-        if _decision_state_for_index(index) == DECISION_EXTRACT
-        and doctrinal_support_level_by_index.get(index, "none") == "minimal"
-    )
-    concept_heavy_degraded_count = sum(
-        1
-        for index in selected_indices
-        if _decision_state_for_index(index) == DECISION_EXTRACT_DEGRADED
-        and "concept_heavy_no_operations" in policy_reason_codes_by_index.get(index, [])
-    )
-    glossary_like_degraded_count = sum(
-        1
-        for index in selected_indices
-        if _decision_state_for_index(index) == DECISION_EXTRACT_DEGRADED
-        and "glossary_like_semantics" in policy_reason_codes_by_index.get(index, [])
-    )
-    terminology_dominant_degraded_count = sum(
-        1
-        for index in selected_indices
-        if _decision_state_for_index(index) == DECISION_EXTRACT_DEGRADED
-        and "terminology_dominant_no_operations" in policy_reason_codes_by_index.get(index, [])
-    )
-    empty_or_near_empty_skip_count = sum(
-        1
-        for index in selected_indices
-        if _decision_state_for_index(index) == DECISION_SKIP
-        and "semantic_payload_empty_or_near_empty" in policy_reason_codes_by_index.get(index, [])
-    )
-    concept_heavy_doctrine_light_count = sum(
-        1 for record in ordered_knowledge_records if _is_concept_heavy_doctrine_light(record)
-    )
-    concept_heavy_doctrine_light_ratio = _float_ratio(
-        concept_heavy_doctrine_light_count,
-        max(1, chunks_really_processed),
-    )
+    extract_strong_count = 0
+    extract_minimal_count = 0
+    concept_heavy_degraded_count = 0
+    glossary_like_degraded_count = 0
+    terminology_dominant_degraded_count = 0
+    empty_or_near_empty_skip_count = 0
+    concept_heavy_doctrine_light_count = 0
+    concept_heavy_doctrine_light_ratio = 0.0
     knowledge_items_average_by_decision: dict[str, float] = {}
     state_field_averages: dict[str, dict[str, float]] = {}
-    for decision_state in (DECISION_EXTRACT, DECISION_EXTRACT_DEGRADED, DECISION_SKIP):
-        records_for_state = [
-            knowledge_records_by_index[index]
-            for index in selected_indices
-            if index in knowledge_records_by_index and _decision_state_for_index(index) == decision_state
-        ]
-        state_items_total = sum(
+    degraded_chunks_with_core_doctrine_ratio = 0.0
+    all_fields_empty_ratio_over_all_chunks = 0.0
+    all_fields_empty_ratio_over_extracted_chunks = 0.0
+    parse_failure_ratio_over_all_chunks = 0.0
+    parse_failure_ratio_over_extracted_chunks = 0.0
+    nonempty_ratio_by_field_over_all_chunks: dict[str, float] = {}
+    nonempty_ratio_by_field_over_extracted_chunks: dict[str, float] = {}
+
+    if knowledge_mode_active:
+        valid_chunk_knowledge_count = max(0, knowledge_chunks_generated - knowledge_parse_failures)
+        total_concepts = sum(len(record.concepts) for record in ordered_knowledge_records)
+        total_rules = sum(len(record.technical_rules) for record in ordered_knowledge_records)
+        total_definitions = sum(len(record.definitions) for record in ordered_knowledge_records)
+        chunks_with_terminology = sum(1 for record in ordered_knowledge_records if len(record.terminology) > 0)
+        chunks_with_technical_rule = sum(1 for record in ordered_knowledge_records if len(record.technical_rules) > 0)
+        total_knowledge_items = sum(
             len(record.concepts)
             + len(record.definitions)
             + len(record.technical_rules)
             + len(record.procedures)
             + len(record.terminology)
-            for record in records_for_state
+            for record in ordered_knowledge_records
         )
-        knowledge_items_average_by_decision[decision_state] = _float_ratio(
-            state_items_total,
-            max(1, len(records_for_state)),
-        )
-        state_field_averages[decision_state] = {
-            "concepts": _float_ratio(sum(len(record.concepts) for record in records_for_state), max(1, len(records_for_state))),
-            "definitions": _float_ratio(sum(len(record.definitions) for record in records_for_state), max(1, len(records_for_state))),
-            "technical_rules": _float_ratio(
-                sum(len(record.technical_rules) for record in records_for_state),
-                max(1, len(records_for_state)),
-            ),
-            "procedures": _float_ratio(sum(len(record.procedures) for record in records_for_state), max(1, len(records_for_state))),
-        }
-    degraded_chunks_with_core_doctrine = sum(
-        1
-        for index in selected_indices
-        if (
-            index in knowledge_records_by_index
-            and _decision_state_for_index(index) == DECISION_EXTRACT_DEGRADED
-            and core_doctrine_pre_clamp_by_index.get(
-                index,
-                _has_core_doctrinal_content(knowledge_records_by_index[index]),
+        avg_concepts_per_chunk = _float_ratio(total_concepts, max(1, knowledge_chunks_generated))
+        avg_rules_per_chunk = _float_ratio(total_rules, max(1, knowledge_chunks_generated))
+        avg_definitions_per_chunk = _float_ratio(total_definitions, max(1, knowledge_chunks_generated))
+        chunk_terminology_ratio = _float_ratio(chunks_with_terminology, max(1, knowledge_chunks_generated))
+        chunk_rule_ratio = _float_ratio(chunks_with_technical_rule, max(1, knowledge_chunks_generated))
+        knowledge_avg_items_per_chunk = _float_ratio(total_knowledge_items, max(1, knowledge_chunks_generated))
+        extracted_chunk_count = sum(
+            1
+            for index in selected_indices
+            if (
+                index in knowledge_records_by_index
+                and _decision_state_for_index(index) in {DECISION_EXTRACT, DECISION_EXTRACT_DEGRADED}
             )
         )
-    )
-    degraded_chunks_with_core_doctrine_ratio = _float_ratio(
-        degraded_chunks_with_core_doctrine,
-        max(1, extract_degraded_count),
-    )
-    all_fields_empty_count = sum(1 for record in ordered_knowledge_records if _all_fields_empty(record))
-    all_fields_empty_extracted_count = sum(1 for record in extracted_knowledge_records if _all_fields_empty(record))
-    all_fields_empty_ratio_over_all_chunks = _float_ratio(all_fields_empty_count, max(1, chunks_really_processed))
-    all_fields_empty_ratio_over_extracted_chunks = _float_ratio(
-        all_fields_empty_extracted_count,
-        max(1, extracted_chunk_count),
-    )
-    parse_failure_ratio_over_all_chunks = _float_ratio(knowledge_parse_failures, max(1, chunks_really_processed))
-    parse_failure_ratio_over_extracted_chunks = _float_ratio(
-        knowledge_parse_failures,
-        max(1, extracted_chunk_count),
-    )
-    nonempty_ratio_by_field_over_all_chunks: dict[str, float] = {}
-    nonempty_ratio_by_field_over_extracted_chunks: dict[str, float] = {}
-    for field_name in SEMANTIC_FIELDS:
-        nonempty_count = sum(1 for record in ordered_knowledge_records if len(getattr(record, field_name)) > 0)
-        nonempty_extracted_count = sum(
-            1 for record in extracted_knowledge_records if len(getattr(record, field_name)) > 0
+        extracted_knowledge_records = [
+            knowledge_records_by_index[index]
+            for index in selected_indices
+            if (
+                index in knowledge_records_by_index
+                and _decision_state_for_index(index) in {DECISION_EXTRACT, DECISION_EXTRACT_DEGRADED}
+            )
+        ]
+        skipped_chunk_count = sum(1 for index in selected_indices if _decision_state_for_index(index) == DECISION_SKIP)
+        extract_degraded_count = sum(
+            1 for index in selected_indices if _decision_state_for_index(index) == DECISION_EXTRACT_DEGRADED
         )
-        nonempty_ratio_by_field_over_all_chunks[field_name] = _float_ratio(nonempty_count, max(1, chunks_really_processed))
-        nonempty_ratio_by_field_over_extracted_chunks[field_name] = _float_ratio(
-            nonempty_extracted_count,
+        decision_state_counts = {
+            DECISION_EXTRACT: sum(1 for index in selected_indices if _decision_state_for_index(index) == DECISION_EXTRACT),
+            DECISION_EXTRACT_DEGRADED: sum(
+                1 for index in selected_indices if _decision_state_for_index(index) == DECISION_EXTRACT_DEGRADED
+            ),
+            DECISION_SKIP: sum(1 for index in selected_indices if _decision_state_for_index(index) == DECISION_SKIP),
+        }
+        extract_strong_count = sum(
+            1
+            for index in selected_indices
+            if _decision_state_for_index(index) == DECISION_EXTRACT
+            and doctrinal_support_level_by_index.get(index, "none") == "strong"
+        )
+        extract_minimal_count = sum(
+            1
+            for index in selected_indices
+            if _decision_state_for_index(index) == DECISION_EXTRACT
+            and doctrinal_support_level_by_index.get(index, "none") == "minimal"
+        )
+        concept_heavy_degraded_count = sum(
+            1
+            for index in selected_indices
+            if _decision_state_for_index(index) == DECISION_EXTRACT_DEGRADED
+            and "concept_heavy_no_operations" in policy_reason_codes_by_index.get(index, [])
+        )
+        glossary_like_degraded_count = sum(
+            1
+            for index in selected_indices
+            if _decision_state_for_index(index) == DECISION_EXTRACT_DEGRADED
+            and "glossary_like_semantics" in policy_reason_codes_by_index.get(index, [])
+        )
+        terminology_dominant_degraded_count = sum(
+            1
+            for index in selected_indices
+            if _decision_state_for_index(index) == DECISION_EXTRACT_DEGRADED
+            and "terminology_dominant_no_operations" in policy_reason_codes_by_index.get(index, [])
+        )
+        empty_or_near_empty_skip_count = sum(
+            1
+            for index in selected_indices
+            if _decision_state_for_index(index) == DECISION_SKIP
+            and "semantic_payload_empty_or_near_empty" in policy_reason_codes_by_index.get(index, [])
+        )
+        concept_heavy_doctrine_light_count = sum(
+            1 for record in ordered_knowledge_records if _is_concept_heavy_doctrine_light(record)
+        )
+        concept_heavy_doctrine_light_ratio = _float_ratio(
+            concept_heavy_doctrine_light_count,
+            max(1, chunks_really_processed),
+        )
+        for decision_state in (DECISION_EXTRACT, DECISION_EXTRACT_DEGRADED, DECISION_SKIP):
+            records_for_state = [
+                knowledge_records_by_index[index]
+                for index in selected_indices
+                if index in knowledge_records_by_index and _decision_state_for_index(index) == decision_state
+            ]
+            state_items_total = sum(
+                len(record.concepts)
+                + len(record.definitions)
+                + len(record.technical_rules)
+                + len(record.procedures)
+                + len(record.terminology)
+                for record in records_for_state
+            )
+            knowledge_items_average_by_decision[decision_state] = _float_ratio(
+                state_items_total,
+                max(1, len(records_for_state)),
+            )
+            state_field_averages[decision_state] = {
+                "concepts": _float_ratio(sum(len(record.concepts) for record in records_for_state), max(1, len(records_for_state))),
+                "definitions": _float_ratio(sum(len(record.definitions) for record in records_for_state), max(1, len(records_for_state))),
+                "technical_rules": _float_ratio(
+                    sum(len(record.technical_rules) for record in records_for_state),
+                    max(1, len(records_for_state)),
+                ),
+                "procedures": _float_ratio(sum(len(record.procedures) for record in records_for_state), max(1, len(records_for_state))),
+            }
+        degraded_chunks_with_core_doctrine = sum(
+            1
+            for index in selected_indices
+            if (
+                index in knowledge_records_by_index
+                and _decision_state_for_index(index) == DECISION_EXTRACT_DEGRADED
+                and core_doctrine_pre_clamp_by_index.get(
+                    index,
+                    _has_core_doctrinal_content(knowledge_records_by_index[index]),
+                )
+            )
+        )
+        degraded_chunks_with_core_doctrine_ratio = _float_ratio(
+            degraded_chunks_with_core_doctrine,
+            max(1, extract_degraded_count),
+        )
+        all_fields_empty_count = sum(1 for record in ordered_knowledge_records if _all_fields_empty(record))
+        all_fields_empty_extracted_count = sum(1 for record in extracted_knowledge_records if _all_fields_empty(record))
+        all_fields_empty_ratio_over_all_chunks = _float_ratio(all_fields_empty_count, max(1, chunks_really_processed))
+        all_fields_empty_ratio_over_extracted_chunks = _float_ratio(
+            all_fields_empty_extracted_count,
             max(1, extracted_chunk_count),
         )
+        parse_failure_ratio_over_all_chunks = _float_ratio(knowledge_parse_failures, max(1, chunks_really_processed))
+        parse_failure_ratio_over_extracted_chunks = _float_ratio(
+            knowledge_parse_failures,
+            max(1, extracted_chunk_count),
+        )
+        for field_name in SEMANTIC_FIELDS:
+            nonempty_count = sum(1 for record in ordered_knowledge_records if len(getattr(record, field_name)) > 0)
+            nonempty_extracted_count = sum(
+                1 for record in extracted_knowledge_records if len(getattr(record, field_name)) > 0
+            )
+            nonempty_ratio_by_field_over_all_chunks[field_name] = _float_ratio(nonempty_count, max(1, chunks_really_processed))
+            nonempty_ratio_by_field_over_extracted_chunks[field_name] = _float_ratio(
+                nonempty_extracted_count,
+                max(1, extracted_chunk_count),
+            )
 
     section_type_distribution: dict[str, int] = {}
     unknown_section_chunks = 0
@@ -1507,7 +1762,7 @@ def process_book(
     knowledge_audit_records: list[dict[str, object]] = []
     clamp_action_counts: dict[str, int] = {}
     semantic_filter_action_counts: dict[str, int] = {}
-    if KNOWLEDGE_EXTRACTION_ENABLED:
+    if knowledge_mode_active:
         for index in selected_indices:
             if index not in knowledge_records_by_index:
                 continue
@@ -1579,7 +1834,16 @@ def process_book(
                     "knowledge_clamp_action_counts": dict(sorted(clamp_action_counts.items())),
                     "knowledge_semantic_filter_action_counts": dict(sorted(semantic_filter_action_counts.items())),
                     "knowledge_audit_output_path": (
-                        knowledge_audit_output_path if KNOWLEDGE_EXTRACTION_ENABLED else None
+                        knowledge_audit_output_path if knowledge_mode_active else None
+                    ),
+                    "argument_audit_output_path": (
+                        argument_audit_output_path if argument_mode_active else None
+                    ),
+                    "argument_output_path": (
+                        argument_output_path if argument_mode_active else None
+                    ),
+                    "argument_map_output_path": (
+                        argument_map_output_path if argument_mode_active and book_profile.enable_argument_map else None
                     ),
                     "knowledge_precheck_type_distribution": dict(
                         sorted(
@@ -1597,12 +1861,27 @@ def process_book(
                             }.items()
                         )
                     ),
+                    "argument_decision_distribution": (
+                        {
+                            decision: sum(
+                                1 for row in argument_audit_rows_by_index.values() if row.get("decision") == decision
+                            )
+                            for decision in ("ok", "empty_legitimate", "parse_fallback", "llm_empty", "invalid_payload")
+                        }
+                        if argument_mode_active
+                        else None
+                    ),
                 }
             )
             _save_manifest(checkpoint_root, manifest_payload)
         except (json.JSONDecodeError, OSError):
             pass
-    chunk_summary_records = make_chunk_summary_records(ordered_summaries)
+    block_input_summaries = (
+        render_argument_block_input(ordered_argument_records, output_language=output_language)
+        if argument_mode_active
+        else ordered_summaries
+    )
+    chunk_summary_records = make_chunk_summary_records(block_input_summaries)
     block_total = (len(chunk_summary_records) + 7) // 8
     _emit_progress(progress_callback, "synthesis", "Sintetizando bloques")
 
@@ -1654,7 +1933,30 @@ def process_book(
             front_matter_output_path,
             json.dumps(front_matter_outline_record.to_dict(), ensure_ascii=False, indent=2),
         )
-    if KNOWLEDGE_EXTRACTION_ENABLED:
+    if argument_mode_active:
+        argument_lines = [
+            json.dumps(record.to_dict(), ensure_ascii=False)
+            for record in ordered_argument_records
+        ]
+        save_text(argument_output_path, "\n".join(argument_lines))
+        argument_audit_lines = [
+            json.dumps(argument_audit_rows_by_index[index], ensure_ascii=False)
+            for index in selected_indices
+            if index in argument_audit_rows_by_index
+        ]
+        save_text(argument_audit_output_path, "\n".join(argument_audit_lines))
+        if book_profile.enable_argument_map:
+            argument_map_payload = build_argument_map(
+                ordered_argument_records,
+                source_title=source_path.stem,
+                audit_rows=[
+                    argument_audit_rows_by_index[index]
+                    for index in selected_indices
+                    if index in argument_audit_rows_by_index
+                ],
+            )
+            save_text(argument_map_output_path, json.dumps(argument_map_payload, ensure_ascii=False, indent=2))
+    elif knowledge_mode_active:
         knowledge_lines = [
             json.dumps(record.to_dict(), ensure_ascii=False)
             for record in ordered_knowledge_records
@@ -1670,6 +1972,7 @@ def process_book(
         save_text(document_map_path, serialize_document_map_sidecar(sidecar_payload))
 
     _log(verbose, "== Final Summary ==")
+    _log(verbose, f"Profile: {book_profile.profile_name}")
     _log(verbose, f"Processing mode: {processing_mode}")
     _log(verbose, f"Total chunks detected: {total_chunks_detected}")
     _log(verbose, f"Chunks to process: {chunks_to_process}")
@@ -1685,7 +1988,13 @@ def process_book(
     _log(verbose, f"Output path: {output_path}")
     if front_matter_outline_active and front_matter_outline_record is not None:
         _log(verbose, f"Front matter outline path: {front_matter_output_path}")
-    if KNOWLEDGE_EXTRACTION_ENABLED:
+    if argument_mode_active:
+        _log(verbose, f"Argument output path: {argument_output_path}")
+        _log(verbose, f"Argument audit path: {argument_audit_output_path}")
+        if book_profile.enable_argument_map:
+            _log(verbose, f"Argument map path: {argument_map_output_path}")
+        _log(verbose, f"argument_parse_failures: {argument_parse_failures}")
+    elif knowledge_mode_active:
         _log(verbose, f"Knowledge output path: {knowledge_output_path}")
         _log(verbose, f"Knowledge audit path: {knowledge_audit_output_path}")
         _log(verbose, f"total_chunks: {chunks_really_processed}")
@@ -1759,7 +2068,11 @@ def process_book(
         front_matter_outline_output_path=(
             front_matter_output_path if front_matter_outline_active and front_matter_outline_record is not None else None
         ),
-        knowledge_output_path=(knowledge_output_path if KNOWLEDGE_EXTRACTION_ENABLED else None),
+        knowledge_output_path=(knowledge_output_path if knowledge_mode_active else None),
+        argument_output_path=(argument_output_path if argument_mode_active else None),
+        argument_map_output_path=(
+            argument_map_output_path if argument_mode_active and book_profile.enable_argument_map else None
+        ),
         document_map_path=(document_map_path if structure_enabled and structure_map is not None else None),
         llm_calls_made=llm_calls_made,
     )

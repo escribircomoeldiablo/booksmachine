@@ -54,7 +54,7 @@ class PipelineContractTests(unittest.TestCase):
             self.assertTrue(expected_compendium_path.exists())
             self.assertTrue(expected_chunk_path.exists())
             self.assertTrue(expected_block_path.exists())
-            self.assertTrue(expected_front_matter_path.exists())
+            self.assertFalse(expected_front_matter_path.exists())
             self.assertEqual(
                 expected_compendium_path.read_text(encoding="utf-8"),
                 "compendium::global",

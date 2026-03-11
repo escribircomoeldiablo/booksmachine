@@ -64,3 +64,21 @@ def build_front_matter_outline_output_path(input_path: str, output_folder: str) 
     """Build the front matter outline artifact output path."""
     source_path = Path(input_path)
     return str(Path(output_folder) / f"{source_path.stem}_front_matter_outline.json")
+
+
+def build_argument_chunks_output_path(input_path: str, output_folder: str) -> str:
+    """Build the chunk-level argumentative JSONL artifact output path."""
+    source_path = Path(input_path)
+    return str(Path(output_folder) / f"{source_path.stem}_argument_chunks.jsonl")
+
+
+def build_argument_audit_output_path(input_path: str, output_folder: str) -> str:
+    """Build the chunk-level argumentative audit JSONL output path."""
+    source_path = Path(input_path)
+    return str(Path(output_folder) / f"{source_path.stem}_argument_audit.jsonl")
+
+
+def build_argument_map_output_path(input_path: str, output_folder: str) -> str:
+    """Build the argumentative consolidated map output path."""
+    source_path = Path(input_path)
+    return str(Path(output_folder) / f"{source_path.stem}_argument_map.json")

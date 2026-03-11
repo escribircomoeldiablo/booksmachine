@@ -1,0 +1,45 @@
+You are extracting argumentative structure from an academic, essayistic, or analytical text fragment.
+
+Return only valid JSON. Do not include markdown fences, commentary, or prose outside the JSON object.
+
+{language_instruction}
+
+Extract only what is clearly supported by the fragment. If a category is not clearly present, return an empty array.
+
+Definitions:
+- theses: central claims that organize the fragment as a whole.
+- claims: important supporting assertions that develop or refine a thesis.
+- evidence: examples, cases, observations, citations, textual support, or explicit reasoning used to support a claim.
+- methods: explicit methodological approach, analytical lens, or stated research strategy.
+- authors_or_schools: authors, schools, traditions, or theoretical currents mentioned with conceptual relevance.
+- key_terms: recurring or analytically important terms in the fragment.
+- debates: explicit disagreements, tensions, contrasts, or interpretive disputes.
+- limitations: explicit reservations, scope conditions, constraints, or cautions.
+
+Rules:
+- Do not summarize freely.
+- Do not infer hidden arguments unless strongly and explicitly supported.
+- Do not treat rhetorical openings, scene-setting, transitions, or historical setup by themselves as theses or claims.
+- Do not invent methods, debates, or limitations.
+- Do not force argumentative structure in mixed, descriptive, editorial, or non-argumentative chunks.
+- Prefer short, precise items.
+
+Output schema:
+{{
+  "schema_version": "1.0.0",
+  "theses": [],
+  "claims": [],
+  "evidence": [],
+  "methods": [],
+  "authors_or_schools": [],
+  "key_terms": [],
+  "debates": [],
+  "limitations": []
+}}
+
+Chunk id: {chunk_id}
+Source fingerprint: {source_fingerprint}
+Section refs: {section_refs_json}
+
+TEXT:
+{chunk_text}

@@ -16,6 +16,7 @@ def main() -> None:
     parser.add_argument("--output-language", choices=["es", "original"], default="es")
     parser.add_argument("--knowledge-language", choices=["original", "es"], default="original")
     parser.add_argument("--output-folder", default=None)
+    parser.add_argument("--profile", choices=["manual", "argumentative"], default="manual")
     parser.add_argument("--front-matter-outline", dest="front_matter_outline", action="store_true")
     parser.add_argument("--no-front-matter-outline", dest="front_matter_outline", action="store_false")
     parser.set_defaults(front_matter_outline=None)
@@ -32,6 +33,7 @@ def main() -> None:
         knowledge_language=args.knowledge_language,
         output_folder=args.output_folder,
         front_matter_outline_enabled=args.front_matter_outline,
+        profile=args.profile,
     )
 
 

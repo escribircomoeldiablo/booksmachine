@@ -25,6 +25,12 @@ def _load_template() -> str:
     return _PROMPT_TEMPLATE_PATH.read_text(encoding="utf-8")
 
 
+def get_chunk_knowledge_prompt_hash() -> str:
+    import hashlib
+
+    return hashlib.sha256(_load_template().encode("utf-8")).hexdigest()
+
+
 def _format_section_refs(section_refs: list[SectionRef]) -> str:
     payload = [
         {
