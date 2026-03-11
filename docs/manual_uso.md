@@ -223,12 +223,24 @@ Resultado final:
 - resumen final
 - resumen por chunks
 - resumen por bloques
+- front matter outline auxiliar
 - conocimiento por chunk
 - auditoria de conocimiento
 - conceptos consolidados
 - familias
 - candidatos de familias
 - ontologia
+
+Artifact adicional del pipeline base:
+
+- `..._front_matter_outline.json`
+
+Notas:
+
+- se genera antes del chunking principal
+- es auxiliar y auditable
+- no modifica por si solo `knowledge_chunks`, `knowledge_concepts`, `knowledge_families` ni `knowledge_ontology`
+- se puede desactivar con `FRONT_MATTER_OUTLINE_ENABLED=false`
 
 ## 9. Errores comunes
 

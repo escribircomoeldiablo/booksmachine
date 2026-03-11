@@ -57,8 +57,21 @@ def _extract_json_block(raw_text: str) -> str:
         raise ValueError("Family discovery response did not contain a JSON object.")
 
     depth = 0
+    in_string = False
+    escaped = False
     for index in range(start, len(stripped)):
         char = stripped[index]
+        if escaped:
+            escaped = False
+            continue
+        if char == "\\":
+            escaped = True
+            continue
+        if char == '"':
+            in_string = not in_string
+            continue
+        if in_string:
+            continue
         if char == "{":
             depth += 1
         elif char == "}":
@@ -69,9 +82,40 @@ def _extract_json_block(raw_text: str) -> str:
     raise ValueError("Family discovery response contained incomplete JSON.")
 
 
+def _escape_control_characters_in_strings(value: str) -> str:
+    escaped_chars: list[str] = []
+    in_string = False
+    escaped = False
+    replacements = {
+        "\n": "\\n",
+        "\r": "\\r",
+        "\t": "\\t",
+        "\b": "\\b",
+        "\f": "\\f",
+    }
+    for char in value:
+        if escaped:
+            escaped_chars.append(char)
+            escaped = False
+            continue
+        if char == "\\":
+            escaped_chars.append(char)
+            escaped = True
+            continue
+        if char == '"':
+            escaped_chars.append(char)
+            in_string = not in_string
+            continue
+        if in_string and ord(char) < 32:
+            escaped_chars.append(replacements.get(char, f"\\u{ord(char):04x}"))
+            continue
+        escaped_chars.append(char)
+    return "".join(escaped_chars)
+
+
 def parse_family_discovery_response(raw_text: str) -> dict[str, object]:
     """Parse and normalize the LLM discovery output."""
-    payload = json.loads(_extract_json_block(raw_text))
+    payload = json.loads(_escape_control_characters_in_strings(_extract_json_block(raw_text)))
     candidate_rows = payload.get("candidate_families", [])
     left_unclustered = payload.get("left_unclustered", [])
 

@@ -13,6 +13,7 @@ from .chunker_structural import build_structural_chunks
 from .compiler import (
     build_block_output_path,
     build_chunk_output_path,
+    build_front_matter_outline_output_path,
     build_knowledge_audit_output_path,
     build_knowledge_chunks_output_path,
     build_output_path,
@@ -23,6 +24,10 @@ from .compiler import (
 from .config import (
     CHUNK_OVERLAP,
     CHUNK_SIZE,
+    FRONT_MATTER_INITIAL_EXCERPT_CHARS,
+    FRONT_MATTER_MAX_CHARS,
+    FRONT_MATTER_MAX_SECTIONS,
+    FRONT_MATTER_OUTLINE_ENABLED,
     KNOWLEDGE_DECISION_POLICY_ENABLE,
     KNOWLEDGE_DEGRADED_WEAK_SUPPORT_CONCEPTS_MAX,
     KNOWLEDGE_DEGRADED_WEAK_SUPPORT_TERMINOLOGY_MAX,
@@ -50,6 +55,8 @@ from .config import (
     STRUCTURAL_CHUNKER_SPLIT_WINDOW,
     STRUCTURAL_CHUNKER_TARGET_SIZE,
 )
+from .front_matter_extractor import collect_front_matter_input, extract_front_matter_outline
+from .front_matter_schema import FrontMatterOutlineV1, make_empty_front_matter_outline
 from .document_map_cleaner import clean_document_map
 from .knowledge_extractor import chunk_knowledge_to_summary_text, extract_chunk_knowledge
 from .knowledge_normalize import (
@@ -800,6 +807,7 @@ def process_book(
     output_language: str = "es",
     knowledge_language: str = "original",
     output_folder: str | None = None,
+    front_matter_outline_enabled: bool | None = None,
     progress_callback: ProgressCallback | None = None,
 ) -> str:
     """Process a book file and save an aggregated technical summary."""
@@ -813,7 +821,13 @@ def process_book(
         raise ValueError("knowledge_language must be either 'es' or 'original'")
 
     source_path = Path(path)
+    book_title = source_path.stem
     effective_output_folder = output_folder or OUTPUT_FOLDER
+    front_matter_outline_active = (
+        FRONT_MATTER_OUTLINE_ENABLED
+        if front_matter_outline_enabled is None
+        else front_matter_outline_enabled
+    )
     _emit_progress(progress_callback, "loading", f"Cargando documento: {source_path.name}")
     structure_enabled = STRUCTURE_PASS_ENABLED
     if structure_enabled:
@@ -829,6 +843,9 @@ def process_book(
     structural_postcheck: dict[str, object] | None = None
     structural_postcheck_passed: bool | None = None
     fallback_reason: str | None = None
+    front_matter_outline_record: FrontMatterOutlineV1 | None = None
+    front_matter_parse_error: str | None = None
+    front_matter_output_path = build_front_matter_outline_output_path(str(source_path), effective_output_folder)
     excluded_section_types_active = sorted(STRUCTURAL_CHUNKER_EXCLUDED_TYPES)
     excluded_sections_count = 0
     if structure_enabled:
@@ -858,6 +875,30 @@ def process_book(
                 f"text_hash={structure_map['text_hash']}"
             ),
         )
+    if front_matter_outline_active and not dry_run:
+        _emit_progress(progress_callback, "front_matter", "Extrayendo front matter outline")
+        front_matter_input = collect_front_matter_input(
+            text=text,
+            document_map=structure_map,  # type: ignore[arg-type]
+            book_title=book_title,
+            max_sections=max(1, FRONT_MATTER_MAX_SECTIONS),
+            max_chars=max(1, FRONT_MATTER_MAX_CHARS),
+            initial_excerpt_chars=max(1, FRONT_MATTER_INITIAL_EXCERPT_CHARS),
+        )
+        try:
+            front_matter_result = extract_front_matter_outline(front_matter_input)
+            front_matter_outline_record = front_matter_result.record
+            front_matter_parse_error = front_matter_result.parse_error
+            if front_matter_result.used_fallback and front_matter_result.parse_error:
+                _log(verbose, f"Front matter outline fallback: {front_matter_result.parse_error}")
+        except Exception as exc:
+            front_matter_parse_error = str(exc)
+            front_matter_outline_record = make_empty_front_matter_outline(
+                book_title=book_title,
+                source=front_matter_input.source,
+                confidence_notes=[f"extraction_fallback: {exc}"],
+            )
+            _log(verbose, f"Front matter outline error: {exc}")
     _emit_progress(progress_callback, "chunking", "Dividiendo documento en chunks")
     processing_mode = "knowledge_extraction" if KNOWLEDGE_EXTRACTION_ENABLED else "summary"
     chunking_mode = "legacy"
@@ -1245,6 +1286,11 @@ def process_book(
                 "knowledge_precheck_reason_counts": (
                     dict(sorted(precheck_reason_counts.items())) if KNOWLEDGE_EXTRACTION_ENABLED else None
                 ),
+                "front_matter_outline_enabled": front_matter_outline_active,
+                "front_matter_outline_output_path": (
+                    front_matter_output_path if front_matter_outline_active and not dry_run else None
+                ),
+                "front_matter_outline_parse_error": front_matter_parse_error,
             },
         )
 
@@ -1603,6 +1649,11 @@ def process_book(
     save_text(chunk_output_path, chunk_summary_artifact)
     save_text(block_output_path, block_summary_artifact)
     save_text(output_path, final_summary)
+    if front_matter_outline_active and front_matter_outline_record is not None:
+        save_text(
+            front_matter_output_path,
+            json.dumps(front_matter_outline_record.to_dict(), ensure_ascii=False, indent=2),
+        )
     if KNOWLEDGE_EXTRACTION_ENABLED:
         knowledge_lines = [
             json.dumps(record.to_dict(), ensure_ascii=False)
@@ -1632,6 +1683,8 @@ def process_book(
     _log(verbose, f"Chunk output path: {chunk_output_path}")
     _log(verbose, f"Block output path: {block_output_path}")
     _log(verbose, f"Output path: {output_path}")
+    if front_matter_outline_active and front_matter_outline_record is not None:
+        _log(verbose, f"Front matter outline path: {front_matter_output_path}")
     if KNOWLEDGE_EXTRACTION_ENABLED:
         _log(verbose, f"Knowledge output path: {knowledge_output_path}")
         _log(verbose, f"Knowledge audit path: {knowledge_audit_output_path}")
@@ -1703,6 +1756,9 @@ def process_book(
         output_path=output_path,
         chunk_output_path=chunk_output_path,
         block_output_path=block_output_path,
+        front_matter_outline_output_path=(
+            front_matter_output_path if front_matter_outline_active and front_matter_outline_record is not None else None
+        ),
         knowledge_output_path=(knowledge_output_path if KNOWLEDGE_EXTRACTION_ENABLED else None),
         document_map_path=(document_map_path if structure_enabled and structure_map is not None else None),
         llm_calls_made=llm_calls_made,

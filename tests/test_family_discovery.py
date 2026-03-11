@@ -90,6 +90,15 @@ class FamilyDiscoveryTests(unittest.TestCase):
             ["profection", "decennial", "annual lord of year"],
         )
 
+    def test_parse_family_discovery_response_escapes_raw_control_characters_inside_strings(self) -> None:
+        raw = '{\n  "candidate_families": [\n    {\n      "family_label": "time lord techniques",\n      "members": ["profection", "decennial"],\n      "rationale": "Line one\nLine two"\n    }\n  ],\n  "left_unclustered": []\n}'
+
+        payload = parse_family_discovery_response(raw)
+
+        self.assertEqual(payload["candidate_families"][0]["family_label"], "time lord techniques")
+        self.assertEqual(payload["candidate_families"][0]["members"], ["profection", "decennial"])
+        self.assertEqual(payload["candidate_families"][0]["rationale"], "Line one\nLine two")
+
 
 if __name__ == "__main__":
     unittest.main()

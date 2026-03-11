@@ -1,0 +1,57 @@
+Eres un analista estructural conservador.
+
+Tarea:
+Analiza SOLO el material de front matter proporcionado y devuelve SOLO un objeto JSON valido.
+
+Reglas obligatorias:
+1. No cambies `book_title`. Debe permanecer exactamente igual al valor entregado.
+2. Distingue entre:
+   - estructura editorial observada
+   - familias conceptuales candidatas
+   - conceptos esperados
+   - taxonomia provisional
+3. No inventes conceptos, familias ni relaciones que no esten sostenidos por el material.
+4. No conviertas titulos editoriales en ontologia final automaticamente.
+5. Si la senal es debil o editorialmente ruidosa, devuelve pocas o ninguna entradas y explica la cautela en `confidence_notes`.
+6. Devuelve SOLO JSON. Sin markdown, sin comentarios, sin texto extra.
+
+Esquema exacto de salida:
+{{
+  "schema_version": "1.0.0",
+  "book_title": "{book_title}",
+  "source": {source_json},
+  "family_candidates": [
+    {{
+      "name": "",
+      "aliases": [],
+      "evidence": [],
+      "confidence": 0.0,
+      "status": "candidate"
+    }}
+  ],
+  "core_concepts_expected": [
+    {{
+      "name": "",
+      "evidence": [],
+      "priority": "high"
+    }}
+  ],
+  "provisional_taxonomy": [
+    {{
+      "parent": "",
+      "child": "",
+      "relation_type": "",
+      "confidence": 0.0
+    }}
+  ],
+  "normalization_hints": [
+    {{
+      "canonical": "",
+      "variants": []
+    }}
+  ],
+  "confidence_notes": []
+}}
+
+Material de entrada:
+{sections_json}

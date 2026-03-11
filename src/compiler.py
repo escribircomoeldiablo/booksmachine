@@ -58,3 +58,9 @@ def build_knowledge_audit_output_path(input_path: str, output_folder: str) -> st
     """Build the chunk-level knowledge audit sidecar JSONL output path."""
     source_path = Path(input_path)
     return str(Path(output_folder) / f"{source_path.stem}_knowledge_audit.jsonl")
+
+
+def build_front_matter_outline_output_path(input_path: str, output_folder: str) -> str:
+    """Build the front matter outline artifact output path."""
+    source_path = Path(input_path)
+    return str(Path(output_folder) / f"{source_path.stem}_front_matter_outline.json")
