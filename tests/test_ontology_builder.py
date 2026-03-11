@@ -202,8 +202,24 @@ class OntologyBuilderTests(unittest.TestCase):
         self.assertEqual(linked["lunar motion"]["node_kind"], "family")
         self.assertEqual(linked["lunar motion"]["family_id"], "lunar_motion")
         self.assertEqual(linked["lunar motion"]["family_members"], ["void in course moon", "lunar application"])
+        self.assertEqual(linked["lunar motion"]["child_concepts"], ["void in course moon", "lunar application"])
         self.assertEqual(linked["lunar motion"]["source_chunks"], [4, 5])
+        self.assertEqual(linked["void in course moon"]["family_id"], ["lunar_motion"])
         self.assertEqual(linked["void in course moon"]["belongs_to_families"], ["lunar motion"])
+        self.assertEqual(linked["void in course moon"]["parent_concepts"], ["lunar motion"])
+
+    def test_apply_taxonomy_links_preserves_scalar_family_id_for_family_nodes(self) -> None:
+        concepts = {
+            "lunar motion": {
+                **_payload(concept="lunar motion", source_chunks=[4]),
+                "family_id": "lunar_motion",
+                "node_kind": "family",
+            }
+        }
+
+        linked = apply_taxonomy_links(concepts, canonical_map={"lunar motion": "lunar motion"})
+
+        self.assertEqual(linked["lunar motion"]["family_id"], "lunar_motion")
 
     def test_build_ontology_supports_family_memberships_when_taxonomy_is_empty(self) -> None:
         concepts = {
@@ -226,7 +242,9 @@ class OntologyBuilderTests(unittest.TestCase):
         )
 
         self.assertIn("lunar motion", ontology)
+        self.assertEqual(ontology["lunar motion"]["child_concepts"], ["void in course moon"])
         self.assertEqual(ontology["void in course moon"]["belongs_to_families"], ["lunar motion"])
+        self.assertEqual(ontology["void in course moon"]["parent_concepts"], ["lunar motion"])
 
 
 if __name__ == "__main__":

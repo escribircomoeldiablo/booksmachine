@@ -10,13 +10,14 @@ def _payload(
     definitions: list[str] | None = None,
     technical_rules: list[str] | None = None,
     procedures: list[str] | None = None,
+    terminology: list[str] | None = None,
 ) -> dict[str, object]:
     return {
         "concept": "placeholder",
         "definitions": definitions or [],
         "technical_rules": technical_rules or [],
         "procedures": procedures or [],
-        "terminology": [],
+        "terminology": terminology or [],
         "examples": [],
         "relationships": [],
         "source_chunks": [1],
@@ -91,6 +92,33 @@ class ConceptFilterTests(unittest.TestCase):
 
         self.assertNotIn("ascendant", filtered)
         self.assertIn("midheaven", filtered)
+
+    def test_filter_valid_concepts_keeps_exact_terminology_anchor_without_formal_definition(self) -> None:
+        concepts = {
+            "lot of fortune": _payload(terminology=["Lot of Fortune", "Fortuna"]),
+            "lord of nativity": _payload(terminology=["Lord of the Nativity"]),
+            "malefic": _payload(terminology=["Lot of Fortune", "Master of the Nativity"]),
+        }
+        concepts["lot of fortune"]["concept"] = "lot of fortune"
+        concepts["lord of nativity"]["concept"] = "lord of nativity"
+        concepts["malefic"]["concept"] = "malefic"
+
+        filtered = filter_valid_concepts(concepts)
+
+        self.assertIn("lot of fortune", filtered)
+        self.assertIn("lord of nativity", filtered)
+        self.assertNotIn("malefic", filtered)
+
+    def test_filter_valid_concepts_allows_nominal_head_before_as_narrative_suffix(self) -> None:
+        concepts = {
+            "equal house system as starting at ascendant degree with 30 each house": _payload(definitions=["d1"]),
+            "hyleg as releaser in longevity determination": _payload(definitions=["d1"]),
+        }
+
+        filtered = filter_valid_concepts(concepts)
+
+        self.assertIn("equal house system as starting at ascendant degree with 30 each house", filtered)
+        self.assertIn("hyleg as releaser in longevity determination", filtered)
 
 
 if __name__ == "__main__":

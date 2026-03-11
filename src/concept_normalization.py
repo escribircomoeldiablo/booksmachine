@@ -15,10 +15,28 @@ _PROTECTED_S_SUFFIXES: tuple[str, ...] = (
 )
 _TOKEN_REPAIRS: dict[str, str] = {
     "advantageou": "advantageous",
+    "aquariu": "aquarius",
+    "arie": "aries",
     "phasi": "phasis",
     "chrematistiko": "chrematistikos",
     "oikodespote": "oikodespotes",
 }
+_DIRECT_NORMALIZED_MAP: dict[str, str] = {
+    "octava casa": "eighth house",
+}
+_TECHNICAL_HEAD_PATTERNS: tuple[tuple[re.Pattern[str], str], ...] = (
+    (re.compile(r"^equal house system\b"), "equal house system"),
+    (re.compile(r"^hyleg\b"), "hyleg"),
+    (re.compile(r"^inception\b"), "inception"),
+    (re.compile(r"^derived houses?\b"), "derived house"),
+    (re.compile(r"^almuten\b"), "almuten"),
+    (re.compile(r".*\bbound lord\b.*"), "bound lord"),
+    (re.compile(r".*\blord of nativity\b.*"), "lord of nativity"),
+    (re.compile(r".*\b(?:oikodespotes|master of nativity)\b.*"), "oikodespotes"),
+    (re.compile(r".*\bpartile aspects?\b.*"), "partile aspect"),
+    (re.compile(r"^(?:relative\s+)?angularity$"), "angularity"),
+    (re.compile(r"^(?:planetary\s+)?phases?\b"), "phase"),
+)
 
 
 def _singularize_token(token: str) -> str:
@@ -49,6 +67,10 @@ def _strip_leading_articles(text: str) -> str:
 
 
 def _canonicalize_discursive_phrase(text: str) -> str:
+    for pattern, replacement in _TECHNICAL_HEAD_PATTERNS:
+        if pattern.match(text):
+            return replacement
+
     # Collapse common discourse-heavy concept phrasings into stable heads.
     patterns: tuple[tuple[re.Pattern[str], str], ...] = (
         (
@@ -95,6 +117,7 @@ def normalize_concept_name(concept: str) -> str:
         return ""
 
     normalized = _strip_leading_articles(normalized)
+    normalized = _DIRECT_NORMALIZED_MAP.get(normalized, normalized)
     normalized = _canonicalize_discursive_phrase(normalized)
     tokens = [_singularize_token(token) for token in normalized.split()]
     normalized = " ".join(_TOKEN_REPAIRS.get(token, token) for token in tokens)

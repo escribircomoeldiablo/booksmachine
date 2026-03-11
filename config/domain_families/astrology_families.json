@@ -31,7 +31,14 @@
       "phase transition intensification",
       "phasis condition",
       "planetary phase transition",
-      "bending of moon"
+      "bending of moon",
+      "solar phase",
+      "morning star",
+      "morning set",
+      "of morning",
+      "of evening",
+      "eastern western",
+      "lunation phase"
     ],
     "controlled_patterns": [
       "heliacal morning rise",
@@ -114,7 +121,8 @@
       "enclosure eniperischesis",
       "flowing apart aporroia",
       "juxtaposition or neighboring homoresis",
-      "separation aporroia"
+      "separation aporroia",
+      "neighboring"
     ],
     "controlled_patterns": [
       "intervention"
@@ -128,12 +136,18 @@
       "dignity",
       "domicile",
       "domicile lord",
+      "domicile lord for house",
       "exaltation",
+      "exaltation lord",
       "fall",
       "detriment",
       "bound term",
+      "bound lord",
       "bound lord rulership system",
+      "triplicity lord",
+      "face",
       "decan face",
+      "monomoira",
       "dispositor",
       "almuten",
       "lord lady of zodiacal sign",
@@ -185,6 +199,7 @@
       "joint master of nativity",
       "lord of nativity",
       "hyleg",
+      "killing planet anairetes",
       "predominator",
       "oikodespotes",
       "lord of fortune"
@@ -194,10 +209,20 @@
     "id": "celestial_coordinates",
     "label": "celestial coordinate system",
     "aliases": [
+      "ascending node",
       "celestial equator",
       "celestial latitude",
       "celestial longitude",
       "easterly direction"
+    ]
+  },
+  {
+    "id": "ascensional_measures",
+    "label": "ascensional measures",
+    "aliases": [
+      "ascensional time",
+      "pre ascension",
+      "post ascension"
     ]
   },
   {
@@ -226,12 +251,39 @@
     ]
   },
   {
+    "id": "house_interpretive_criteria",
+    "label": "house interpretive criteria",
+    "aliases": [
+      "house place",
+      "topic of house",
+      "favorability"
+    ]
+  },
+  {
     "id": "zodiac_signs",
     "label": "zodiac signs",
     "aliases": [
+      "aries",
+      "taurus",
       "gemini",
+      "cancer",
       "leo",
-      "libra"
+      "virgo",
+      "libra",
+      "scorpio",
+      "sagittarius",
+      "capricorn",
+      "aquarius",
+      "pisces"
+    ]
+  },
+  {
+    "id": "ray_motion_doctrines",
+    "label": "ray motion doctrines",
+    "aliases": [
+      "casting ray",
+      "aporrhoia",
+      "passing by"
     ]
   },
   {
@@ -264,7 +316,16 @@
     "label": "sign qualities",
     "aliases": [
       "bi corporeal",
-      "gender"
+      "gender",
+      "fixed sign"
+    ]
+  },
+  {
+    "id": "planetary_significations",
+    "label": "planetary significations",
+    "aliases": [
+      "planet s own natural signification",
+      "natural signification"
     ]
   },
   {

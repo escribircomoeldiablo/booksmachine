@@ -23,6 +23,7 @@ PROCEDURAL_FIELDS: tuple[str, ...] = (
 
 _RE_MULTI_SPACE = re.compile(r"\s+")
 _RE_LEADING_ARTICLES = re.compile(r"^(?:the|a|an)\s+")
+_RE_AS_NARRATIVE_SUFFIX = re.compile(r"^(?P<head>.+?)\s+as\s+.+$")
 _RE_LEADING_NARRATIVE_PREFIX = re.compile(
     r"^(?:"
     r"historical\s+usage\s+and\s+debate\s+on|"
@@ -44,8 +45,10 @@ _RE_LEADING_NARRATIVE_PREFIX = re.compile(
 _DIRECT_CANONICAL_MAP: dict[str, str] = {
     "advantageou": "chrematistikos",
     "advantageous": "chrematistikos",
+    "aquariu": "aquarius",
     "angularity and favorability of house": "favorability of house",
     "angularity and favorability of houses": "favorability of house",
+    "arie": "aries",
     "chreniatistiko house": "chrematistikos",
     "chreniatistikos house": "chrematistikos",
     "chrematistiko": "chrematistikos",
@@ -55,8 +58,11 @@ _DIRECT_CANONICAL_MAP: dict[str, str] = {
     "good houses or places": "benefic houses",
     "fortunate houses": "benefic houses",
     "favorable houses": "benefic houses",
+    "lord of house": "domicile lord for house",
+    "master": "master of nativity",
     "bad houses": "malefic houses",
     "bad houses or places": "malefic houses",
+    "octava casa": "eighth house",
     "unfortunate houses": "malefic houses",
     "unfavorable houses": "malefic houses",
     "oikodespote": "oikodespotes",
@@ -129,6 +135,13 @@ def _strip_narrative_prefix(text: str) -> str:
     return _RE_LEADING_NARRATIVE_PREFIX.sub("", text).strip()
 
 
+def _strip_narrative_suffix(text: str) -> str:
+    match = _RE_AS_NARRATIVE_SUFFIX.match(text)
+    if match:
+        return match.group("head").strip()
+    return text
+
+
 def _canonicalize_nominal_pattern(text: str) -> str:
     if text in _PRESERVE_CLASSIFICATION_FORMS:
         return text
@@ -160,6 +173,7 @@ def canonicalize_concept_name(concept: str) -> str:
         return ""
 
     canonical = _strip_narrative_prefix(canonical)
+    canonical = _strip_narrative_suffix(canonical)
     canonical = _RE_LEADING_ARTICLES.sub("", canonical).strip()
     canonical = _DIRECT_CANONICAL_MAP.get(canonical, canonical)
     canonical = _procedural_anchor(canonical)

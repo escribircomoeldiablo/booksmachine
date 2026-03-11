@@ -23,6 +23,14 @@ _NARRATIVE_PATTERNS: tuple[re.Pattern[str], ...] = (
     re.compile(r"\brelevance in\b"),
     re.compile(r"\bin traditional astrology\b"),
 )
+_AS_NARRATIVE_SPLIT_RE = re.compile(r"^(?P<head>.+?)\s+as\s+.+$")
+_LEADING_ARTICLE_RE = re.compile(r"\b(?:the|a|an)\b")
+
+
+def _normalize_anchor_text(value: str) -> str:
+    normalized = " ".join(value.lower().split())
+    normalized = _LEADING_ARTICLE_RE.sub(" ", normalized)
+    return " ".join(normalized.split())
 
 
 def _has_real_core_content(payload: dict[str, object]) -> bool:
@@ -30,11 +38,31 @@ def _has_real_core_content(payload: dict[str, object]) -> bool:
         return bool(payload.get("source_chunks")) and any(
             payload.get(field_name) for field_name in ("definitions", "terminology", "relationships")
         )
-    return any(payload.get(field_name) for field_name in ("definitions", "technical_rules", "procedures"))
+    if any(payload.get(field_name) for field_name in ("definitions", "technical_rules", "procedures")):
+        return True
+
+    concept_name = _normalize_anchor_text(str(payload.get("concept", "")))
+    terminology = payload.get("terminology", [])
+    if concept_name and isinstance(terminology, list):
+        normalized_terms = {_normalize_anchor_text(str(value)) for value in terminology if isinstance(value, str)}
+        if concept_name in normalized_terms:
+            return True
+
+    return False
+
+
+def _nominal_candidate(name: str) -> str:
+    normalized = " ".join(name.lower().split())
+    match = _AS_NARRATIVE_SPLIT_RE.match(normalized)
+    if match:
+        head = " ".join(match.group("head").split()).strip()
+        if " of " not in head:
+            return head
+    return normalized
 
 
 def _is_valid_concept_name(name: str) -> bool:
-    normalized = " ".join(name.lower().split())
+    normalized = _nominal_candidate(name)
     if not normalized:
         return False
     word_count = len(normalized.split())

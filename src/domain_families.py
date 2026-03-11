@@ -38,6 +38,11 @@ def load_family_catalog(*, domain: str = "astrology", catalog_path: str | None =
                 "id": family_id,
                 "label": label,
                 "aliases": [alias.strip() for alias in aliases if isinstance(alias, str) and alias.strip()],
+                "controlled_patterns": [
+                    pattern.strip()
+                    for pattern in item.get("controlled_patterns", [])
+                    if isinstance(pattern, str) and pattern.strip()
+                ],
             }
         )
     return catalog

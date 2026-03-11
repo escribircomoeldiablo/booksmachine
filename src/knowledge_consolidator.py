@@ -452,20 +452,29 @@ def _procedural_items_for_concept(chunk: dict[str, object], concept: str, field_
         related_steps = item.get("related_steps", [])
         if isinstance(related_steps, list) and any(isinstance(step, str) and concept_surface in _normalize_surface(step) for step in related_steps):
             matched.append(item)
-    if matched:
-        return matched
     normalized_concepts = [
         value
         for value in chunk.get("_normalized_concepts", [])
         if isinstance(value, str) and value
     ]
+    if (
+        field_name == "procedure_steps"
+        and concept == "profection"
+        and any(name in normalized_concepts for name in ("profection", "annual lord of year"))
+        and _chunk_supports_concept_alias(chunk, concept)
+    ):
+        fallback_steps = [item for item in values if isinstance(item, dict)]
+        combined: list[dict[str, object]] = []
+        for item in matched + fallback_steps:
+            if item not in combined:
+                combined.append(item)
+        return combined
+    if matched:
+        return matched
     if normalized_concepts == [concept]:
         return [item for item in values if isinstance(item, dict)]
     if concept in _STRICT_PROCEDURAL_MATCH_CONCEPTS:
         return []
-    preferred_anchor = _preferred_procedural_anchor(chunk)
-    if preferred_anchor == concept and _chunk_supports_concept_alias(chunk, concept):
-        return [item for item in values if isinstance(item, dict)]
     return matched
 
 
@@ -925,6 +934,16 @@ def export_family_candidates(payload: dict[str, object], output_path: str) -> No
         json.dump(payload, handle, ensure_ascii=False, indent=2)
 
 
+def _load_json_artifact(path: str) -> dict[str, object]:
+    """Load a JSON artifact and normalize missing files to an explicit error."""
+    artifact_path = Path(path)
+    with artifact_path.open("r", encoding="utf-8") as handle:
+        payload = json.load(handle)
+    if not isinstance(payload, dict):
+        raise ValueError(f"Expected JSON object in artifact: {path}")
+    return payload
+
+
 def export_procedural_audit(payload: dict[str, object], output_path: str) -> None:
     """Persist procedural audit artifact as UTF-8 JSON."""
     destination = Path(output_path)
@@ -1010,15 +1029,27 @@ def build_knowledge_family_candidates(
     return destination
 
 
-def build_knowledge_ontology(path: str, output_path: str | None = None) -> str:
+def build_knowledge_ontology(
+    path: str,
+    output_path: str | None = None,
+    *,
+    reuse_existing_families: bool = False,
+    skip_family_candidates: bool = False,
+) -> str:
     """Build an ontology artifact from consolidated concept knowledge."""
     concepts = _build_canonical_concepts(path)
-    family_payload = assign_families(concepts, load_family_catalog())
-    export_families(family_payload, build_families_output_path(path))
-    export_family_candidates(
-        _build_family_candidates_payload(path),
-        build_family_candidates_output_path(path),
-    )
+    if reuse_existing_families:
+        family_payload = _load_json_artifact(build_families_output_path(path))
+    else:
+        family_payload = assign_families(concepts, load_family_catalog())
+        export_families(family_payload, build_families_output_path(path))
+
+    if not skip_family_candidates:
+        export_family_candidates(
+            _build_family_candidates_payload(path),
+            build_family_candidates_output_path(path),
+        )
+
     taxonomy = infer_taxonomy_links(concepts)
     taxonomy_links = taxonomy["links"] if ONTOLOGY_ENABLE_INFERRED_TAXONOMY else None
     ontology = build_ontology(concepts, taxonomy_links=taxonomy_links, family_memberships=family_payload)
@@ -1039,10 +1070,22 @@ def main() -> None:
         help="Artifact to generate from the knowledge chunks input.",
     )
     parser.add_argument("--output-path", default=None)
+    parser.add_argument(
+        "--reuse-existing-families",
+        action="store_true",
+        help="For ontology only: reuse the existing *_knowledge_families.json artifact instead of recomputing families.",
+    )
+    parser.add_argument(
+        "--skip-family-candidates",
+        action="store_true",
+        help="For ontology only: do not regenerate *_knowledge_family_candidates.json.",
+    )
     args = parser.parse_args()
     if args.artifact == "all":
         if args.output_path is not None:
             parser.error("--output-path can only be used when --artifact targets a single file.")
+        if args.reuse_existing_families or args.skip_family_candidates:
+            parser.error("--reuse-existing-families and --skip-family-candidates only apply to --artifact ontology.")
         destinations = [
             consolidate_knowledge_chunks(args.input_path),
             build_knowledge_families(args.input_path),
@@ -1063,7 +1106,18 @@ def main() -> None:
         "procedural-audit": build_procedural_audit,
         "procedure-frames": build_procedure_frames_artifact,
     }
-    destination = builders[args.artifact](args.input_path, args.output_path)
+    if args.artifact != "ontology" and (args.reuse_existing_families or args.skip_family_candidates):
+        parser.error("--reuse-existing-families and --skip-family-candidates only apply to --artifact ontology.")
+
+    if args.artifact == "ontology":
+        destination = build_knowledge_ontology(
+            args.input_path,
+            args.output_path,
+            reuse_existing_families=args.reuse_existing_families,
+            skip_family_candidates=args.skip_family_candidates,
+        )
+    else:
+        destination = builders[args.artifact](args.input_path, args.output_path)
     print(destination)
 
 

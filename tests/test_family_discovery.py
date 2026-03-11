@@ -90,6 +90,60 @@ class FamilyDiscoveryTests(unittest.TestCase):
             ["profection", "decennial", "annual lord of year"],
         )
 
+    def test_discover_family_candidates_falls_back_to_deterministic_clusters_when_llm_fails(self) -> None:
+        concepts = {
+            "aries": {"concept": "aries", "definitions": [], "terminology": [], "relationships": [], "source_chunks": []},
+            "cancer": {"concept": "cancer", "definitions": [], "terminology": [], "relationships": [], "source_chunks": []},
+            "aquarius": {"concept": "aquarius", "definitions": [], "terminology": [], "relationships": [], "source_chunks": []},
+            "ascensional time": {"concept": "ascensional time", "definitions": [], "terminology": [], "relationships": [], "source_chunks": []},
+            "pre ascension": {"concept": "pre ascension", "definitions": [], "terminology": [], "relationships": [], "source_chunks": []},
+            "post ascension": {"concept": "post ascension", "definitions": [], "terminology": [], "relationships": [], "source_chunks": []},
+            "house place": {"concept": "house place", "definitions": [], "terminology": [], "relationships": [], "source_chunks": []},
+            "topic of house": {"concept": "topic of house", "definitions": [], "terminology": [], "relationships": [], "source_chunks": []},
+            "favorability": {"concept": "favorability", "definitions": [], "terminology": [], "relationships": [], "source_chunks": []},
+        }
+        family_payload = {
+            "unassigned_concepts": [
+                "aries",
+                "cancer",
+                "aquarius",
+                "ascensional time",
+                "pre ascension",
+                "post ascension",
+                "house place",
+                "topic of house",
+                "favorability",
+            ]
+        }
+
+        def _failing_llm(_: str) -> str:
+            raise RuntimeError("OpenAI SDK is not installed.")
+
+        payload = discover_family_candidates(concepts=concepts, family_payload=family_payload, llm_callable=_failing_llm)
+
+        self.assertEqual(
+            payload["candidate_families"],
+            [
+                {
+                    "family_label": "zodiac signs",
+                    "members": ["aries", "cancer", "aquarius"],
+                    "rationale": "Canonical zodiac sign concepts left outside the current family catalog.",
+                },
+                {
+                    "family_label": "ascensional measures",
+                    "members": ["ascensional time", "pre ascension", "post ascension"],
+                    "rationale": "Ascensional calculations and measures that belong to the same technical cluster.",
+                },
+                {
+                    "family_label": "house interpretive criteria",
+                    "members": ["house place", "topic of house", "favorability"],
+                    "rationale": "Interpretive criteria used to determine what a house signifies and how strongly it functions.",
+                },
+            ],
+        )
+        self.assertEqual(payload["left_unclustered"], [])
+        self.assertEqual(payload["discovery_error"], "OpenAI SDK is not installed.")
+
     def test_parse_family_discovery_response_escapes_raw_control_characters_inside_strings(self) -> None:
         raw = '{\n  "candidate_families": [\n    {\n      "family_label": "time lord techniques",\n      "members": ["profection", "decennial"],\n      "rationale": "Line one\nLine two"\n    }\n  ],\n  "left_unclustered": []\n}'
 

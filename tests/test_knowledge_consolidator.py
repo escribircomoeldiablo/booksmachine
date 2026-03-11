@@ -54,6 +54,34 @@ class KnowledgeConsolidatorTests(unittest.TestCase):
         families_mock.assert_called_once_with("outputs/book_knowledge_chunks.jsonl", None)
         self.assertEqual(stdout.getvalue().strip(), "outputs/book_knowledge_families.json")
 
+    def test_main_passes_ontology_only_flags(self) -> None:
+        stdout = io.StringIO()
+        with (
+            patch.object(
+                sys,
+                "argv",
+                [
+                    "knowledge_consolidator",
+                    "outputs/book_knowledge_chunks.jsonl",
+                    "--artifact",
+                    "ontology",
+                    "--reuse-existing-families",
+                    "--skip-family-candidates",
+                ],
+            ),
+            patch("src.knowledge_consolidator.build_knowledge_ontology", return_value="outputs/book_knowledge_ontology.json") as ontology_mock,
+            patch("sys.stdout", stdout),
+        ):
+            main()
+
+        ontology_mock.assert_called_once_with(
+            "outputs/book_knowledge_chunks.jsonl",
+            None,
+            reuse_existing_families=True,
+            skip_family_candidates=True,
+        )
+        self.assertEqual(stdout.getvalue().strip(), "outputs/book_knowledge_ontology.json")
+
     def test_main_builds_all_artifacts_in_order(self) -> None:
         stdout = io.StringIO()
         with (
@@ -846,11 +874,81 @@ class KnowledgeConsolidatorTests(unittest.TestCase):
                 ontology_exported["house angularity"]["child_concepts"],
                 ["angular houses", "succedent houses", "cadent houses"],
             )
-            self.assertEqual(ontology_exported["angular houses"]["parent_concepts"], ["house angularity"])
+            self.assertEqual(
+                ontology_exported["angular houses"]["parent_concepts"],
+                ["house angularity", "house classification"],
+            )
             self.assertIn("chrematistikos", ontology_exported)
             self.assertEqual(ontology_exported["chrematistikos"]["related_concepts"], ["house angularity"])
             self.assertIn("whole sign house system", ontology_exported)
             self.assertEqual(ontology_exported["whole sign house system"]["aliases"], [])
+
+    def test_consolidation_does_not_dump_mixed_procedural_chunk_into_predominator(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            base = Path(tmpdir)
+            chunks_path = base / "Ancient Astrology - Vol 2_knowledge_chunks.jsonl"
+            audit_path = base / "Ancient Astrology - Vol 2_knowledge_audit.jsonl"
+            _write_jsonl(
+                chunks_path,
+                [
+                    {
+                        "chunk_id": "chunk_87_0_100",
+                        "concepts": ["Predominator", "Profection", "Primary direction", "Progression"],
+                        "definitions": [
+                            "Profections: A symbolic timing procedure in which each sign is individually activated, in zodiacal order, at a fixed rate.",
+                            "Primary direction: A timing technique based on motion by right ascension.",
+                            "Progression: A derived motion used for timing.",
+                        ],
+                        "technical_rules": [
+                            "In profections, the time lord governs the life for the duration of the profection.",
+                        ],
+                        "procedures": [],
+                        "terminology": ["Annual lord", "Time lord"],
+                        "relationships": [],
+                        "examples": [],
+                        "ambiguities": [],
+                        "procedure_steps": [
+                            {"id": "step-1", "order": 1, "text": "Activate each zodiac sign individually in zodiacal order at a fixed rate"},
+                            {"id": "step-2", "order": 2, "text": "Identify the house matters occupied by the profected sign"},
+                            {"id": "step-3", "order": 3, "text": "Determine the planet ruling the profected sign (the time lord)"},
+                        ],
+                        "decision_rules": [
+                            {
+                                "condition": "In primary directions, when a planet or point encounters another planet, exact aspect, or angle by right ascension",
+                                "outcome": "This signifies an event or timing point in the native's life",
+                                "related_steps": [],
+                            }
+                        ],
+                        "preconditions": [],
+                        "exceptions": [],
+                        "author_variants": [
+                            {
+                                "author": "Valens",
+                                "kind": "usage",
+                                "text": "Described tertiary progressions as a timing technique for nativities but did not give it a specific name",
+                                "related_steps": [],
+                                "operation": "annotate",
+                            }
+                        ],
+                        "procedure_outputs": [
+                            {"text": "Identification of the time lord who governs the native's life during the profection period"},
+                            {"text": "Comparison of progressed planetary positions to natal positions to indicate timing of events"},
+                        ],
+                    }
+                ],
+            )
+            _write_jsonl(
+                audit_path,
+                [{"chunk_id": "chunk_87_0_100", "chunk_index": 88, "decision": "extract"}],
+            )
+
+            exported = _build_canonical_concepts(str(chunks_path))
+
+            self.assertEqual(exported["predominator"]["shared_procedure"], [])
+            self.assertEqual(exported["predominator"]["procedure_outputs"], [])
+            self.assertGreaterEqual(len(exported["profection"]["shared_procedure"]), 3)
+            self.assertEqual(len(exported["primary direction"]["decision_rules"]), 1)
+            self.assertEqual(len(exported["progression"]["author_variant_overrides"]), 1)
 
     def test_build_knowledge_families_writes_family_artifact(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -1028,6 +1126,74 @@ class KnowledgeConsolidatorTests(unittest.TestCase):
             self.assertTrue(Path(ontology_output_path).exists())
             self.assertEqual(candidates_exported["candidate_families"], [])
             self.assertEqual(candidates_exported["left_unclustered"], [])
+
+    def test_build_knowledge_ontology_can_reuse_existing_families_and_skip_candidates(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            base = Path(tmpdir)
+            chunks_path = base / "Ancient Astrology - Vol 2_knowledge_chunks.jsonl"
+            audit_path = base / "Ancient Astrology - Vol 2_knowledge_audit.jsonl"
+            families_path = Path(build_families_output_path(str(chunks_path)))
+            candidates_path = Path(build_family_candidates_output_path(str(chunks_path)))
+            _write_jsonl(
+                chunks_path,
+                [
+                    {
+                        "chunk_id": "chunk_5_0_100",
+                        "concepts": ["Void in course moon"],
+                        "definitions": ["Void in course moon: the moon does not perfect an aspect before leaving its sign."],
+                        "technical_rules": [],
+                        "procedures": [],
+                        "terminology": ["lunar separation"],
+                        "relationships": [],
+                        "examples": [],
+                        "ambiguities": [],
+                    }
+                ],
+            )
+            _write_jsonl(
+                audit_path,
+                [{"chunk_id": "chunk_5_0_100", "chunk_index": 6, "decision": "extract"}],
+            )
+            families_path.write_text(
+                json.dumps(
+                    {
+                        "families": [
+                            {
+                                "family_id": "lunar_motion",
+                                "label": "lunar motion",
+                                "members": ["void in course moon"],
+                            }
+                        ],
+                        "concept_assignments": [
+                            {
+                                "concept": "void in course moon",
+                                "families": [{"family_id": "lunar_motion", "source": "fixture", "confidence": 1.0}],
+                            }
+                        ],
+                        "unassigned_concepts": [],
+                    },
+                    ensure_ascii=False,
+                    indent=2,
+                ),
+                encoding="utf-8",
+            )
+            candidates_path.write_text('{"sentinel": true}', encoding="utf-8")
+
+            with patch("src.knowledge_consolidator._build_family_candidates_payload") as candidates_mock:
+                ontology_output_path = build_knowledge_ontology(
+                    str(chunks_path),
+                    reuse_existing_families=True,
+                    skip_family_candidates=True,
+                )
+
+            ontology_exported = json.loads(Path(ontology_output_path).read_text(encoding="utf-8"))
+            candidates_exported = json.loads(candidates_path.read_text(encoding="utf-8"))
+
+            candidates_mock.assert_not_called()
+            self.assertTrue(Path(ontology_output_path).exists())
+            self.assertEqual(ontology_exported["void in course moon"]["family_id"], ["lunar_motion"])
+            self.assertEqual(ontology_exported["void in course moon"]["belongs_to_families"], ["lunar motion"])
+            self.assertEqual(candidates_exported, {"sentinel": True})
 
     def test_build_knowledge_ontology_keeps_legacy_behavior_when_inferred_taxonomy_flag_is_off(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:

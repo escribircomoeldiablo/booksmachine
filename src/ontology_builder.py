@@ -87,7 +87,7 @@ def _dedupe_ints_sorted(items: list[int]) -> list[int]:
 def _new_ontology_node(concept: str) -> dict[str, object]:
     return {
         "concept": concept,
-        "family_id": "",
+        "family_id": [],
         "aliases": [],
         "definitions": [],
         "technical_rules": [],
@@ -184,7 +184,16 @@ def apply_taxonomy_links(
         node = _new_ontology_node(concept_name)
         for field_name in ONTOLOGY_FIELDS:
             if field_name in payload:
-                node[field_name] = list(payload[field_name])
+                if field_name == "family_id":
+                    raw_family_id = payload[field_name]
+                    if isinstance(raw_family_id, list):
+                        node[field_name] = list(raw_family_id)
+                    elif isinstance(raw_family_id, str):
+                        node[field_name] = raw_family_id
+                    else:
+                        node[field_name] = []
+                else:
+                    node[field_name] = list(payload[field_name])
         node["source_chunks"] = list(payload.get("source_chunks", []))
         node["node_kind"] = str(payload.get("node_kind", "topic"))
         linked[concept_name] = node
@@ -255,7 +264,7 @@ def apply_family_memberships(
         for concept_name, payload in ontology.items()
     }
     for payload in linked.values():
-        payload.setdefault("family_id", "")
+        payload.setdefault("family_id", [])
         payload.setdefault("belongs_to_families", [])
         payload.setdefault("family_members", [])
         payload.setdefault("aliases", [])
@@ -296,10 +305,22 @@ def apply_family_memberships(
             if not isinstance(member_name, str) or member_name not in linked:
                 continue
             member_node = linked[member_name]
+            member_family_ids = member_node.get("family_id", [])
+            if isinstance(member_family_ids, str):
+                member_family_ids = [member_family_ids] if member_family_ids else []
+            elif not isinstance(member_family_ids, list):
+                member_family_ids = []
+            member_node["family_id"] = _dedupe_preserve_order(
+                [str(value).strip() for value in member_family_ids if str(value).strip()] + [family_id]
+            )
             _append_relation(member_node, "belongs_to_families", family_label)
+            _append_relation(member_node, "parent_concepts", family_label)
             _append_relation(family_node, "family_members", member_name)
+            _append_relation(family_node, "child_concepts", member_name)
             source_chunks = _dedupe_ints_sorted(source_chunks + list(member_node.get("source_chunks", [])))
 
+        if family_node["child_concepts"]:
+            family_node["node_kind"] = "family"
         family_node["source_chunks"] = source_chunks
         linked[family_label] = family_node
 

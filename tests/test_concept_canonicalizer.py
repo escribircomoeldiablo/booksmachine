@@ -38,6 +38,14 @@ class ConceptCanonicalizerTests(unittest.TestCase):
             "house angularity",
         )
         self.assertEqual(canonicalize_concept_name("angularity of house"), "house angularity")
+        self.assertEqual(
+            canonicalize_concept_name("equal house system as starting at ascendant degree with 30 each house"),
+            "equal house system",
+        )
+        self.assertEqual(
+            canonicalize_concept_name("hyleg as releaser in longevity determination"),
+            "hyleg",
+        )
 
     def test_canonicalize_concept_name_fixes_chreniatistiko_transliteration(self) -> None:
         self.assertEqual(canonicalize_concept_name("chreniatistiko house"), "chrematistikos")
@@ -46,8 +54,15 @@ class ConceptCanonicalizerTests(unittest.TestCase):
         self.assertEqual(canonicalize_concept_name("advantageous"), "chrematistikos")
         self.assertEqual(canonicalize_concept_name("advantageou"), "chrematistikos")
         self.assertEqual(canonicalize_concept_name("chrematistiko"), "chrematistikos")
+        self.assertEqual(canonicalize_concept_name("aquariu"), "aquarius")
+        self.assertEqual(canonicalize_concept_name("arie"), "aries")
+        self.assertEqual(canonicalize_concept_name("octava casa"), "eighth house")
         self.assertEqual(canonicalize_concept_name("oikodespote"), "oikodespotes")
         self.assertEqual(canonicalize_concept_name("phasi"), "phasis")
+
+    def test_canonicalize_concept_name_repairs_fragmented_authority_and_rulership_aliases(self) -> None:
+        self.assertEqual(canonicalize_concept_name("master"), "master of nativity")
+        self.assertEqual(canonicalize_concept_name("lord of house"), "domicile lord for house")
 
     def test_canonicalize_concept_name_pluralizes_technical_house_concepts(self) -> None:
         self.assertEqual(canonicalize_concept_name("angular house"), "angular houses")

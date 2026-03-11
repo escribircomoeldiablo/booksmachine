@@ -6,6 +6,20 @@ import re
 
 _MIN_PARTIAL_ALIAS_TOKENS = 2
 _PARTIAL_MATCH_MIN_CONFIDENCE = 0.8
+_HYBRID_RULE_CONFIDENCE = 0.95
+
+_HYBRID_FAMILY_RULES: tuple[tuple[re.Pattern[str], tuple[str, ...]], ...] = (
+    (re.compile(r"^(?:kurio|lord kurio of nativity|ruler of nativity|predominator apheta hyleg)$"), ("chart_authorities",)),
+    (re.compile(r"^(?:al kadkhudah alcochoden)$"), ("chart_authorities",)),
+    (re.compile(r"^(?:almuten|almuten al mubtazz)$"), ("chart_authorities", "dignities")),
+    (re.compile(r"^(?:lot of fortune|fortune house|releasing house)$"), ("lots",)),
+    (re.compile(r"^(?:derived houses)$"), ("house_systems",)),
+    (re.compile(r"^(?:ascendant|mc midheaven|imum coeli ic|nadir)$"), ("chart_angles",)),
+    (re.compile(r"^(?:bound lord|triplicity lord)$"), ("dignities",)),
+    (re.compile(r"^(?:aspect|testimony|witnessing)$"), ("configuration",)),
+)
+
+
 def _normalize_text(value: str) -> str:
     normalized = value.lower().replace("-", " ")
     normalized = re.sub(r"[^a-z0-9\s]", " ", normalized)
@@ -122,6 +136,29 @@ def _find_partial_matches(payload: dict[str, object], family_index: list[dict[st
     return matches[:2]
 
 
+def _find_hybrid_rule_matches(payload: dict[str, object], family_index: list[dict[str, object]]) -> list[dict[str, object]]:
+    concept_label = _normalize_text(str(payload.get("concept", "")).strip())
+    if not concept_label:
+        return []
+    family_labels = {str(item["id"]): str(item["label"]) for item in family_index}
+    matches: list[dict[str, object]] = []
+    for pattern, family_ids in _HYBRID_FAMILY_RULES:
+        if not pattern.match(concept_label):
+            continue
+        for family_id in family_ids:
+            label = family_labels.get(family_id, family_id)
+            matches.append(
+                {
+                    "family_id": family_id,
+                    "family_label": label,
+                    "source": "hybrid_rule",
+                    "confidence": _HYBRID_RULE_CONFIDENCE,
+                }
+            )
+    matches.sort(key=lambda item: (-float(item["confidence"]), str(item["family_id"])))
+    return matches
+
+
 def assign_families(
     concepts: dict[str, dict[str, object]],
     families_catalog: list[dict[str, object]],
@@ -150,7 +187,19 @@ def assign_families(
     for concept_name in sorted(concepts):
         payload = concepts[concept_name]
         exact_matches = _find_exact_matches(concept_name, family_index)
-        matches = exact_matches or _find_partial_matches(payload, family_index)
+        partial_matches = [] if exact_matches else _find_partial_matches(payload, family_index)
+        hybrid_matches = _find_hybrid_rule_matches(payload, family_index)
+        matches = exact_matches or partial_matches
+        combined: list[dict[str, object]] = []
+        seen_family_ids: set[str] = set()
+        for match in list(matches) + list(hybrid_matches):
+            family_id = str(match["family_id"])
+            if family_id in seen_family_ids:
+                continue
+            seen_family_ids.add(family_id)
+            combined.append(match)
+        combined.sort(key=lambda item: (-float(item["confidence"]), str(item["family_id"])))
+        matches = combined[:2]
 
         if not matches:
             unassigned_concepts.append(concept_name)

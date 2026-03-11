@@ -8,6 +8,65 @@ from pathlib import Path
 from .ai_client import ask_llm
 
 _PROMPT_TEMPLATE_PATH = Path(__file__).resolve().parent.parent / "prompts" / "family_discovery.txt"
+_FALLBACK_DISCOVERY_RULES: tuple[tuple[str, tuple[str, ...], str], ...] = (
+    (
+        "zodiac signs",
+        (
+            "aries",
+            "taurus",
+            "gemini",
+            "cancer",
+            "leo",
+            "virgo",
+            "libra",
+            "scorpio",
+            "sagittarius",
+            "capricorn",
+            "aquarius",
+            "pisces",
+        ),
+        "Canonical zodiac sign concepts left outside the current family catalog.",
+    ),
+    (
+        "ascensional measures",
+        (
+            "ascensional time",
+            "pre ascension",
+            "post ascension",
+        ),
+        "Ascensional calculations and measures that belong to the same technical cluster.",
+    ),
+    (
+        "planetary phase conditions",
+        (
+            "solar phase",
+            "morning star",
+            "morning set",
+            "of morning",
+            "of evening",
+            "eastern western",
+        ),
+        "Visibility and phase-condition terminology used to classify planetary appearances.",
+    ),
+    (
+        "ray motion doctrines",
+        (
+            "casting ray",
+            "aporrhoia",
+            "passing by",
+        ),
+        "Technical ray-emission or ray-transfer concepts that operate together in aspect doctrine.",
+    ),
+    (
+        "house interpretive criteria",
+        (
+            "house place",
+            "topic of house",
+            "favorability",
+        ),
+        "Interpretive criteria used to determine what a house signifies and how strongly it functions.",
+    ),
+)
 
 
 def load_family_discovery_prompt_template(path: str | None = None) -> str:
@@ -148,6 +207,35 @@ def parse_family_discovery_response(raw_text: str) -> dict[str, object]:
     }
 
 
+def _discover_family_candidates_fallback(
+    *,
+    concepts: dict[str, dict[str, object]],
+    unassigned_concepts: list[str],
+) -> dict[str, object]:
+    known_unassigned = {concept_name for concept_name in unassigned_concepts if concept_name in concepts}
+    candidate_families: list[dict[str, object]] = []
+    assigned_members: set[str] = set()
+
+    for family_label, family_members, rationale in _FALLBACK_DISCOVERY_RULES:
+        matched_members = [member for member in family_members if member in known_unassigned and member not in assigned_members]
+        if len(matched_members) < 3:
+            continue
+        candidate_families.append(
+            {
+                "family_label": family_label,
+                "members": matched_members,
+                "rationale": rationale,
+            }
+        )
+        assigned_members.update(matched_members)
+
+    left_unclustered = [concept_name for concept_name in unassigned_concepts if concept_name not in assigned_members]
+    return {
+        "candidate_families": candidate_families,
+        "left_unclustered": left_unclustered,
+    }
+
+
 def discover_family_candidates(
     *,
     concepts: dict[str, dict[str, object]],
@@ -180,6 +268,13 @@ def discover_family_candidates(
         parsed["discovery_error"] = None
         return parsed
     except Exception as exc:
+        fallback = _discover_family_candidates_fallback(
+            concepts=concepts,
+            unassigned_concepts=unassigned_concepts,
+        )
+        fallback["discovery_error"] = str(exc)
+        if fallback["candidate_families"]:
+            return fallback
         return {
             "candidate_families": [],
             "left_unclustered": list(unassigned_concepts),
